@@ -2,79 +2,114 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import Link from 'next/link';
+import { Store, Eye, MousePointerClick } from 'lucide-react';
 
 type Deal = {
   id: number;
   title: string;
   description: string;
-  valid_till: string | null;
+  valid_till_date: string | null;
+  views: number;
+  clicks: number;
 };
 
-export default function Home() {
+export default function HomePage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // FETCH DEALS
+  /* ---------- FETCH ACTIVE DEALS ---------- */
+  const fetchDeals = async () => {
+    const { data, error } = await supabase
+      .from('deals')
+      .select(
+        'id, title, description, valid_till_date, views, clicks'
+      )
+      .order('created_at', { ascending: false });
+
+    if (!error) setDeals(data || []);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchDeals = async () => {
-      const { data, error } = await supabase
-        .from('deals')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Fetch error:', error);
-      } else {
-        setDeals(data || []);
-      }
-
-      setLoading(false);
-    };
-
     fetchDeals();
   }, []);
 
-  // DELETE DEAL
-  const handleDelete = async (id: number) => {
-    const confirmDelete = confirm('Are you sure you want to delete this deal?');
-    if (!confirmDelete) return;
+  /* ---------- INCREMENT VIEWS ---------- */
+  useEffect(() => {
+    if (deals.length === 0) return;
 
-    const { error } = await supabase
-      .from('deals')
-      .delete()
-      .eq('id', id);
+    supabase.rpc('increment_views', {
+      deal_ids: deals.map(d => d.id),
+    });
+  }, [deals]);
 
-    if (error) {
-      alert('Failed to delete deal');
-      console.error(error);
-    } else {
-      setDeals((prev) => prev.filter((deal) => deal.id !== id));
-    }
+  /* ---------- CLICK ---------- */
+  const handleClick = async (id: number) => {
+    await supabase.rpc('increment_click', { deal_id: id });
   };
 
   return (
-    <main className="min-h-screen bg-gray-100 p-6">
-      <h1 className="text-2xl font-bold mb-2">Local Deals Near You</h1>
-      <p className="text-gray-600 mb-6">
-        Find today’s best offers from nearby shops.
-      </p>
+    <div className="p-4 md:p-6">
+      {/* HERO / CTA */}
+      <div className="bg-black text-white rounded-lg p-6 mb-8 flex flex-col md:flex-row justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">
+            Local Deals Near You
+          </h1>
+          <p className="text-gray-300">
+            Discover the best offers from nearby businesses.
+          </p>
+        </div>
 
-      {loading && <p>Loading...</p>}
+        <Link
+          href="/signup"
+          className="mt-4 md:mt-0 flex items-center gap-2 bg-white text-black px-5 py-3 rounded font-semibold"
+        >
+          <Store size={20} />
+          Business Signup
+        </Link>
+      </div>
+
+      {/* DEAL LIST */}
+      {loading && <p>Loading deals...</p>}
+
+      {!loading && deals.length === 0 && (
+        <p className="text-gray-500">No active deals available.</p>
+      )}
 
       <div className="space-y-4">
         {deals.map((deal) => (
-          <div key={deal.id} className="bg-white p-4 rounded shadow">
-            <h2 className="font-semibold">{deal.title}</h2>
-            <p>{deal.description}</p>
+          <div
+            key={deal.id}
+            onClick={() => handleClick(deal.id)}
+            className="bg-white p-5 rounded shadow hover:shadow-md transition cursor-pointer"
+          >
+            <h2 className="font-semibold text-lg">
+              {deal.title}
+            </h2>
 
-            {deal.valid_till && (
-              <p className="text-sm text-gray-500">
-                Valid till {deal.valid_till}
-              </p>
-            )}
+            <p className="text-gray-700 mt-1">
+              {deal.description}
+            </p>
+
+            <p className="text-sm text-gray-500 mt-2">
+              Valid till:{' '}
+              {deal.valid_till_date ?? 'No expiry'}
+            </p>
+
+            {/* ANALYTICS */}
+            <div className="flex gap-4 text-xs text-gray-400 mt-2">
+              <span className="flex items-center gap-1">
+                <Eye size={14} /> {deal.views} views
+              </span>
+              <span className="flex items-center gap-1">
+                <MousePointerClick size={14} /> {deal.clicks} clicks
+              </span>
+            </div>
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

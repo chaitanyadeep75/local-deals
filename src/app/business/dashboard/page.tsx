@@ -9,7 +9,9 @@ import {
   Trash2,
   LogOut,
   Save,
-  X
+  X,
+  Eye,
+  MousePointerClick
 } from 'lucide-react';
 
 type Deal = {
@@ -17,6 +19,8 @@ type Deal = {
   title: string;
   description: string;
   valid_till_date: string | null;
+  views: number;
+  clicks: number;
 };
 
 type Toast = {
@@ -51,14 +55,16 @@ export default function BusinessDashboard() {
     checkAuth();
   }, [router]);
 
-  /* ---------- FETCH MY DEALS ---------- */
+  /* ---------- FETCH DEALS ---------- */
   const fetchMyDeals = async () => {
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return;
 
     const { data, error } = await supabase
       .from('deals')
-      .select('*')
+      .select(
+        'id, title, description, valid_till_date, views, clicks'
+      )
       .eq('user_id', auth.user.id)
       .order('created_at', { ascending: false });
 
@@ -244,10 +250,18 @@ export default function BusinessDashboard() {
 
                 <p className="text-sm text-gray-500">
                   Valid till:{' '}
-                  {deal.valid_till_date
-                    ? deal.valid_till_date
-                    : 'No expiry'}
+                  {deal.valid_till_date ?? 'No expiry'}
                 </p>
+
+                {/* 📊 ANALYTICS */}
+                <div className="flex gap-4 text-xs text-gray-600 mt-2">
+                  <span className="flex items-center gap-1">
+                    <Eye size={14} /> {deal.views} views
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MousePointerClick size={14} /> {deal.clicks} clicks
+                  </span>
+                </div>
 
                 <div className="flex gap-4 mt-3">
                   <button
