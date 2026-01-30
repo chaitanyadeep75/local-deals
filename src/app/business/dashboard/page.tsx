@@ -16,7 +16,7 @@ type Deal = {
   id: number;
   title: string;
   description: string;
-  valid_till: string;
+  valid_till_date: string | null;
 };
 
 type Toast = {
@@ -29,7 +29,7 @@ export default function BusinessDashboard() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [validTill, setValidTill] = useState('');
+  const [validTillDate, setValidTillDate] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [myDeals, setMyDeals] = useState<Deal[]>([]);
@@ -46,9 +46,7 @@ export default function BusinessDashboard() {
   useEffect(() => {
     const checkAuth = async () => {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        router.replace('/login');
-      }
+      if (!data.session) router.replace('/login');
     };
     checkAuth();
   }, [router]);
@@ -87,7 +85,7 @@ export default function BusinessDashboard() {
     const { error } = await supabase.from('deals').insert({
       title,
       description,
-      valid_till: validTill,
+      valid_till_date: validTillDate || null,
       user_id: auth.user.id,
     });
 
@@ -101,11 +99,11 @@ export default function BusinessDashboard() {
     showToast('Deal added', 'success');
     setTitle('');
     setDescription('');
-    setValidTill('');
+    setValidTillDate('');
     fetchMyDeals();
   };
 
-  /* ---------- UPDATE DEAL (OWNER SAFE) ---------- */
+  /* ---------- UPDATE DEAL ---------- */
   const handleUpdateDeal = async () => {
     if (!editingDeal) return;
 
@@ -117,10 +115,10 @@ export default function BusinessDashboard() {
       .update({
         title: editingDeal.title,
         description: editingDeal.description,
-        valid_till: editingDeal.valid_till,
+        valid_till_date: editingDeal.valid_till_date,
       })
       .eq('id', editingDeal.id)
-      .eq('user_id', auth.user.id); // 🔐 owner check
+      .eq('user_id', auth.user.id);
 
     if (error) {
       showToast(error.message, 'error');
@@ -132,7 +130,7 @@ export default function BusinessDashboard() {
     fetchMyDeals();
   };
 
-  /* ---------- DELETE DEAL (OWNER SAFE) ---------- */
+  /* ---------- DELETE DEAL ---------- */
   const handleDeleteDeal = async (id: number) => {
     if (!confirm('Are you sure you want to delete this deal?')) return;
 
@@ -143,7 +141,7 @@ export default function BusinessDashboard() {
       .from('deals')
       .delete()
       .eq('id', id)
-      .eq('user_id', auth.user.id); // 🔐 owner check
+      .eq('user_id', auth.user.id);
 
     if (error) {
       showToast(error.message, 'error');
@@ -160,8 +158,11 @@ export default function BusinessDashboard() {
     router.replace('/login');
   };
 
+  const isExpired = (date: string | null) =>
+    date ? new Date(date) < new Date() : false;
+
   return (
-    <main className="min-h-screen bg-gray-100 p-4 md:p-6 relative">
+    <main className="min-h-screen bg-gray-100 p-4 md:p-6">
       {/* TOAST */}
       {toast && (
         <div
@@ -173,11 +174,11 @@ export default function BusinessDashboard() {
       )}
 
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Business Dashboard</h1>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 bg-red-500 text-white px-4 py-3 rounded"
+          className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded"
         >
           <LogOut size={18} /> Logout
         </button>
@@ -206,10 +207,10 @@ export default function BusinessDashboard() {
           />
 
           <input
+            type="date"
             className="w-full p-3 border rounded mb-4"
-            placeholder="Valid till"
-            value={validTill}
-            onChange={(e) => setValidTill(e.target.value)}
+            value={validTillDate}
+            onChange={(e) => setValidTillDate(e.target.value)}
           />
 
           <button
@@ -232,10 +233,20 @@ export default function BusinessDashboard() {
           <div className="space-y-4">
             {myDeals.map((deal) => (
               <div key={deal.id} className="bg-white p-4 rounded shadow">
-                <h3 className="font-semibold">{deal.title}</h3>
+                <h3 className="font-semibold">
+                  {deal.title}
+                  {isExpired(deal.valid_till_date) && (
+                    <span className="text-red-500 text-xs ml-2">(Expired)</span>
+                  )}
+                </h3>
+
                 <p>{deal.description}</p>
+
                 <p className="text-sm text-gray-500">
-                  Valid till {deal.valid_till}
+                  Valid till:{' '}
+                  {deal.valid_till_date
+                    ? deal.valid_till_date
+                    : 'No expiry'}
                 </p>
 
                 <div className="flex gap-4 mt-3">
@@ -278,15 +289,22 @@ export default function BusinessDashboard() {
               className="w-full p-3 border rounded mb-3"
               value={editingDeal.description}
               onChange={(e) =>
-                setEditingDeal({ ...editingDeal, description: e.target.value })
+                setEditingDeal({
+                  ...editingDeal,
+                  description: e.target.value,
+                })
               }
             />
 
             <input
+              type="date"
               className="w-full p-3 border rounded mb-4"
-              value={editingDeal.valid_till}
+              value={editingDeal.valid_till_date || ''}
               onChange={(e) =>
-                setEditingDeal({ ...editingDeal, valid_till: e.target.value })
+                setEditingDeal({
+                  ...editingDeal,
+                  valid_till_date: e.target.value || null,
+                })
               }
             />
 
