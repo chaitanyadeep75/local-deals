@@ -42,14 +42,18 @@ export default function BusinessDashboard() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  /* ---------- AUTH ---------- */
+  /* ---------- AUTH GUARD ---------- */
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.push('/login');
-    });
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        router.replace('/login');
+      }
+    };
+    checkAuth();
   }, [router]);
 
-  /* ---------- FETCH DEALS ---------- */
+  /* ---------- FETCH MY DEALS ---------- */
   const fetchMyDeals = async () => {
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return;
@@ -72,18 +76,19 @@ export default function BusinessDashboard() {
     fetchMyDeals();
   }, []);
 
-  /* ---------- ADD ---------- */
+  /* ---------- ADD DEAL ---------- */
   const handleAddDeal = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return;
 
     const { error } = await supabase.from('deals').insert({
       title,
       description,
       valid_till: validTill,
-      user_id: auth.user?.id,
+      user_id: auth.user.id,
     });
 
     setLoading(false);
@@ -100,9 +105,12 @@ export default function BusinessDashboard() {
     fetchMyDeals();
   };
 
-  /* ---------- UPDATE ---------- */
+  /* ---------- UPDATE DEAL (OWNER SAFE) ---------- */
   const handleUpdateDeal = async () => {
     if (!editingDeal) return;
+
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return;
 
     const { error } = await supabase
       .from('deals')
@@ -111,7 +119,8 @@ export default function BusinessDashboard() {
         description: editingDeal.description,
         valid_till: editingDeal.valid_till,
       })
-      .eq('id', editingDeal.id);
+      .eq('id', editingDeal.id)
+      .eq('user_id', auth.user.id); // 🔐 owner check
 
     if (error) {
       showToast(error.message, 'error');
@@ -123,9 +132,18 @@ export default function BusinessDashboard() {
     fetchMyDeals();
   };
 
-  /* ---------- DELETE ---------- */
+  /* ---------- DELETE DEAL (OWNER SAFE) ---------- */
   const handleDeleteDeal = async (id: number) => {
-    const { error } = await supabase.from('deals').delete().eq('id', id);
+    if (!confirm('Are you sure you want to delete this deal?')) return;
+
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return;
+
+    const { error } = await supabase
+      .from('deals')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', auth.user.id); // 🔐 owner check
 
     if (error) {
       showToast(error.message, 'error');
@@ -139,7 +157,7 @@ export default function BusinessDashboard() {
   /* ---------- LOGOUT ---------- */
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
+    router.replace('/login');
   };
 
   return (
@@ -147,7 +165,7 @@ export default function BusinessDashboard() {
       {/* TOAST */}
       {toast && (
         <div
-          className={`fixed top-5 inset-x-4 md:inset-x-auto md:right-5 px-4 py-3 rounded text-white z-50
+          className={`fixed top-5 inset-x-4 md:right-5 md:inset-x-auto px-4 py-3 rounded text-white z-50
           ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
         >
           {toast.message}
@@ -159,7 +177,7 @@ export default function BusinessDashboard() {
         <h1 className="text-2xl font-bold">Business Dashboard</h1>
         <button
           onClick={handleLogout}
-          className="flex items-center justify-center gap-2 bg-red-500 text-white px-4 py-3 rounded"
+          className="flex items-center gap-2 bg-red-500 text-white px-4 py-3 rounded"
         >
           <LogOut size={18} /> Logout
         </button>
@@ -206,6 +224,10 @@ export default function BusinessDashboard() {
         {/* MY DEALS */}
         <div>
           <h2 className="font-semibold mb-4">My Deals</h2>
+
+          {myDeals.length === 0 && (
+            <p className="text-gray-500">No deals created yet.</p>
+          )}
 
           <div className="space-y-4">
             {myDeals.map((deal) => (
@@ -268,7 +290,7 @@ export default function BusinessDashboard() {
               }
             />
 
-            <div className="flex flex-col md:flex-row gap-2">
+            <div className="flex gap-2">
               <button
                 onClick={handleUpdateDeal}
                 className="flex-1 bg-black text-white py-3 rounded flex items-center justify-center gap-2"

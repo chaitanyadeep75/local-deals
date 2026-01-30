@@ -72,13 +72,6 @@ export default function Home() {
                 Valid till {deal.valid_till}
               </p>
             )}
-
-            <button
-              onClick={() => handleDelete(deal.id)}
-              className="mt-2 text-sm text-red-600 hover:underline"
-            >
-              Delete
-            </button>
           </div>
         ))}
       </div>
