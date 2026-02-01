@@ -1,6 +1,5 @@
 'use client';
 
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -12,7 +11,8 @@ import {
   Save,
   X,
   Eye,
-  MousePointerClick
+  MousePointerClick,
+  MapPin
 } from 'lucide-react';
 
 type Deal = {
@@ -22,6 +22,7 @@ type Deal = {
   valid_till_date: string | null;
   views: number;
   clicks: number;
+  city: string | null;
 };
 
 type Toast = {
@@ -41,6 +42,8 @@ export default function BusinessDashboard() {
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
 
+  const [city, setCity] = useState<string | null>(null);
+
   /* ---------- TOAST ---------- */
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -56,6 +59,37 @@ export default function BusinessDashboard() {
     checkAuth();
   }, [router]);
 
+  /* ---------- DETECT CITY ---------- */
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+          );
+          const data = await res.json();
+
+          const detectedCity =
+            data.address?.city ||
+            data.address?.town ||
+            data.address?.village ||
+            null;
+
+          setCity(detectedCity);
+        } catch {
+          // silent fail
+        }
+      },
+      () => {
+        // permission denied → city stays null
+      }
+    );
+  }, []);
+
   /* ---------- FETCH DEALS ---------- */
   const fetchMyDeals = async () => {
     const { data: auth } = await supabase.auth.getUser();
@@ -64,7 +98,7 @@ export default function BusinessDashboard() {
     const { data, error } = await supabase
       .from('deals')
       .select(
-        'id, title, description, valid_till_date, views, clicks'
+        'id, title, description, valid_till_date, views, clicks, city'
       )
       .eq('user_id', auth.user.id)
       .order('created_at', { ascending: false });
@@ -93,6 +127,7 @@ export default function BusinessDashboard() {
       title,
       description,
       valid_till_date: validTillDate || null,
+      city,
       user_id: auth.user.id,
     });
 
@@ -182,7 +217,15 @@ export default function BusinessDashboard() {
 
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Business Dashboard</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Business Dashboard</h1>
+          {city && (
+            <p className="flex items-center gap-1 text-sm text-gray-600">
+              <MapPin size={14} /> Posting deals for <b>{city}</b>
+            </p>
+          )}
+        </div>
+
         <button
           onClick={handleLogout}
           className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded"
@@ -250,11 +293,11 @@ export default function BusinessDashboard() {
                 <p>{deal.description}</p>
 
                 <p className="text-sm text-gray-500">
-                  Valid till:{' '}
+                  {deal.city ?? 'Unknown city'} • Valid till{' '}
                   {deal.valid_till_date ?? 'No expiry'}
                 </p>
 
-                {/* 📊 ANALYTICS */}
+                {/* ANALYTICS */}
                 <div className="flex gap-4 text-xs text-gray-600 mt-2">
                   <span className="flex items-center gap-1">
                     <Eye size={14} /> {deal.views} views
