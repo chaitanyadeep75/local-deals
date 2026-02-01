@@ -37,6 +37,10 @@ body {
   margin: 0 auto;
   padding: 16px;
 }
+.tailwind-test {
+  @apply bg-red-500 text-white p-6 text-3xl;
+}
+
 
 /* ===============================
    TYPOGRAPHY
