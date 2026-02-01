@@ -12,7 +12,8 @@ import {
   X,
   Eye,
   MousePointerClick,
-  MapPin
+  MapPin,
+  LayoutDashboard
 } from 'lucide-react';
 
 type Deal = {
@@ -41,7 +42,6 @@ export default function BusinessDashboard() {
   const [myDeals, setMyDeals] = useState<Deal[]>([]);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
-
   const [city, setCity] = useState<string | null>(null);
 
   /* ---------- TOAST ---------- */
@@ -50,44 +50,28 @@ export default function BusinessDashboard() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  /* ---------- AUTH GUARD ---------- */
+  /* ---------- AUTH ---------- */
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(({ data }) => {
       if (!data.session) router.replace('/login');
-    };
-    checkAuth();
+    });
   }, [router]);
 
-  /* ---------- DETECT CITY ---------- */
+  /* ---------- LOCATION ---------- */
   useEffect(() => {
     if (!navigator.geolocation) return;
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const { latitude, longitude } = pos.coords;
-
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-          );
-          const data = await res.json();
-
-          const detectedCity =
-            data.address?.city ||
-            data.address?.town ||
-            data.address?.village ||
-            null;
-
-          setCity(detectedCity);
-        } catch {
-          // silent fail
-        }
-      },
-      () => {
-        // permission denied → city stays null
-      }
-    );
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
+      );
+      const data = await res.json();
+      setCity(
+        data.address?.city ||
+        data.address?.town ||
+        data.address?.village ||
+        null
+      );
+    });
   }, []);
 
   /* ---------- FETCH DEALS ---------- */
@@ -97,9 +81,7 @@ export default function BusinessDashboard() {
 
     const { data, error } = await supabase
       .from('deals')
-      .select(
-        'id, title, description, valid_till_date, views, clicks, city'
-      )
+      .select('*')
       .eq('user_id', auth.user.id)
       .order('created_at', { ascending: false });
 
@@ -115,7 +97,11 @@ export default function BusinessDashboard() {
     fetchMyDeals();
   }, []);
 
-  /* ---------- ADD DEAL ---------- */
+  /* ---------- STATS ---------- */
+  const totalViews = myDeals.reduce((a, b) => a + b.views, 0);
+  const totalClicks = myDeals.reduce((a, b) => a + b.clicks, 0);
+
+  /* ---------- ADD ---------- */
   const handleAddDeal = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -138,57 +124,25 @@ export default function BusinessDashboard() {
       return;
     }
 
-    showToast('Deal added', 'success');
+    showToast('Deal added successfully', 'success');
     setTitle('');
     setDescription('');
     setValidTillDate('');
     fetchMyDeals();
   };
 
-  /* ---------- UPDATE DEAL ---------- */
-  const handleUpdateDeal = async () => {
-    if (!editingDeal) return;
-
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return;
-
-    const { error } = await supabase
-      .from('deals')
-      .update({
-        title: editingDeal.title,
-        description: editingDeal.description,
-        valid_till_date: editingDeal.valid_till_date,
-      })
-      .eq('id', editingDeal.id)
-      .eq('user_id', auth.user.id);
-
-    if (error) {
-      showToast(error.message, 'error');
-      return;
-    }
-
-    showToast('Deal updated', 'success');
-    setEditingDeal(null);
-    fetchMyDeals();
-  };
-
-  /* ---------- DELETE DEAL ---------- */
+  /* ---------- DELETE ---------- */
   const handleDeleteDeal = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this deal?')) return;
+    if (!confirm('Delete this deal?')) return;
 
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return;
 
-    const { error } = await supabase
+    await supabase
       .from('deals')
       .delete()
       .eq('id', id)
       .eq('user_id', auth.user.id);
-
-    if (error) {
-      showToast(error.message, 'error');
-      return;
-    }
 
     showToast('Deal deleted', 'success');
     fetchMyDeals();
@@ -200,189 +154,92 @@ export default function BusinessDashboard() {
     router.replace('/login');
   };
 
-  const isExpired = (date: string | null) =>
-    date ? new Date(date) < new Date() : false;
-
   return (
-    <main className="min-h-screen bg-gray-100 p-4 md:p-6">
+    <main className="space-y-8">
       {/* TOAST */}
       {toast && (
-        <div
-          className={`fixed top-5 inset-x-4 md:right-5 md:inset-x-auto px-4 py-3 rounded text-white z-50
-          ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
-        >
+        <div className={`fixed top-6 right-6 z-50 px-4 py-3 rounded text-white
+          ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
           {toast.message}
         </div>
       )}
 
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Business Dashboard</h1>
+          <h1 className="text-3xl font-extrabold flex items-center gap-2">
+            <LayoutDashboard /> Dashboard
+          </h1>
           {city && (
-            <p className="flex items-center gap-1 text-sm text-gray-600">
-              <MapPin size={14} /> Posting deals for <b>{city}</b>
+            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+              <MapPin size={14} /> {city}
             </p>
           )}
         </div>
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded"
+          className="bg-red-500 text-white px-4 py-2 rounded-lg"
         >
-          <LogOut size={18} /> Logout
+          <LogOut size={16} />
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* ADD DEAL */}
-        <form onSubmit={handleAddDeal} className="bg-white p-5 rounded shadow">
-          <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <Plus size={18} /> Add Deal
-          </h2>
-
-          <input
-            className="w-full p-3 border rounded mb-3"
-            placeholder="Deal title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-
-          <textarea
-            className="w-full p-3 border rounded mb-3"
-            placeholder="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-
-          <input
-            type="date"
-            className="w-full p-3 border rounded mb-4"
-            value={validTillDate}
-            onChange={(e) => setValidTillDate(e.target.value)}
-          />
-
-          <button
-            disabled={loading}
-            className="w-full bg-black text-white py-3 rounded flex items-center justify-center gap-2"
-          >
-            <Plus size={18} />
-            {loading ? 'Adding...' : 'Add Deal'}
-          </button>
-        </form>
-
-        {/* MY DEALS */}
-        <div>
-          <h2 className="font-semibold mb-4">My Deals</h2>
-
-          {myDeals.length === 0 && (
-            <p className="text-gray-500">No deals created yet.</p>
-          )}
-
-          <div className="space-y-4">
-            {myDeals.map((deal) => (
-              <div key={deal.id} className="bg-white p-4 rounded shadow">
-                <h3 className="font-semibold">
-                  {deal.title}
-                  {isExpired(deal.valid_till_date) && (
-                    <span className="text-red-500 text-xs ml-2">(Expired)</span>
-                  )}
-                </h3>
-
-                <p>{deal.description}</p>
-
-                <p className="text-sm text-gray-500">
-                  {deal.city ?? 'Unknown city'} • Valid till{' '}
-                  {deal.valid_till_date ?? 'No expiry'}
-                </p>
-
-                {/* ANALYTICS */}
-                <div className="flex gap-4 text-xs text-gray-600 mt-2">
-                  <span className="flex items-center gap-1">
-                    <Eye size={14} /> {deal.views} views
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MousePointerClick size={14} /> {deal.clicks} clicks
-                  </span>
-                </div>
-
-                <div className="flex gap-4 mt-3">
-                  <button
-                    onClick={() => setEditingDeal(deal)}
-                    className="flex items-center gap-1 text-blue-600"
-                  >
-                    <Pencil size={16} /> Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteDeal(deal.id)}
-                    className="flex items-center gap-1 text-red-600"
-                  >
-                    <Trash2 size={16} /> Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* KPIs */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="card">
+          <p className="text-sm text-gray-500">Total Deals</p>
+          <h2 className="text-3xl font-extrabold mt-2">{myDeals.length}</h2>
         </div>
-      </div>
+        <div className="card">
+          <p className="text-sm text-gray-500 flex items-center gap-1">
+            <Eye size={14} /> Views
+          </p>
+          <h2 className="text-3xl font-extrabold mt-2">{totalViews}</h2>
+        </div>
+        <div className="card">
+          <p className="text-sm text-gray-500 flex items-center gap-1">
+            <MousePointerClick size={14} /> Clicks
+          </p>
+          <h2 className="text-3xl font-extrabold mt-2">{totalClicks}</h2>
+        </div>
+      </section>
 
-      {/* EDIT MODAL */}
-      {editingDeal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded w-full mx-4 md:max-w-md">
-            <h2 className="font-semibold mb-4 flex items-center gap-2">
-              <Pencil size={18} /> Edit Deal
-            </h2>
+      {/* ADD DEAL */}
+      <form onSubmit={handleAddDeal} className="card space-y-4">
+        <h2 className="font-bold flex items-center gap-2">
+          <Plus size={16} /> Add New Deal
+        </h2>
 
-            <input
-              className="w-full p-3 border rounded mb-3"
-              value={editingDeal.title}
-              onChange={(e) =>
-                setEditingDeal({ ...editingDeal, title: e.target.value })
-              }
-            />
+        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" required />
+        <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" />
+        <input type="date" value={validTillDate} onChange={e => setValidTillDate(e.target.value)} />
 
-            <textarea
-              className="w-full p-3 border rounded mb-3"
-              value={editingDeal.description}
-              onChange={(e) =>
-                setEditingDeal({
-                  ...editingDeal,
-                  description: e.target.value,
-                })
-              }
-            />
+        <button className="btn-primary w-full">
+          {loading ? 'Saving...' : 'Add Deal'}
+        </button>
+      </form>
 
-            <input
-              type="date"
-              className="w-full p-3 border rounded mb-4"
-              value={editingDeal.valid_till_date || ''}
-              onChange={(e) =>
-                setEditingDeal({
-                  ...editingDeal,
-                  valid_till_date: e.target.value || null,
-                })
-              }
-            />
-
-            <div className="flex gap-2">
-              <button
-                onClick={handleUpdateDeal}
-                className="flex-1 bg-black text-white py-3 rounded flex items-center justify-center gap-2"
-              >
-                <Save size={16} /> Save
-              </button>
-              <button
-                onClick={() => setEditingDeal(null)}
-                className="flex-1 border py-3 rounded flex items-center justify-center gap-2"
-              >
-                <X size={16} /> Cancel
-              </button>
+      {/* DEAL LIST */}
+      <section className="space-y-4">
+        {myDeals.map(deal => (
+          <div key={deal.id} className="card flex justify-between items-start">
+            <div>
+              <h3 className="font-bold">{deal.title}</h3>
+              <p className="text-sm">{deal.description}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {deal.views} views • {deal.clicks} clicks
+              </p>
             </div>
+            <button
+              onClick={() => handleDeleteDeal(deal.id)}
+              className="text-red-500"
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
-        </div>
-      )}
+        ))}
+      </section>
     </main>
   );
 }
