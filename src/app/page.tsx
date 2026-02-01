@@ -64,7 +64,7 @@ export default function HomePage() {
     );
   }, []);
 
-  /* ---------- FETCH DEALS (CITY FILTER) ---------- */
+  /* ---------- FETCH DEALS ---------- */
   const fetchDeals = async (selectedCity: string | null) => {
     let query = supabase
       .from('deals')
@@ -78,7 +78,6 @@ export default function HomePage() {
     }
 
     const { data, error } = await query;
-
     if (!error) setDeals(data || []);
     setLoading(false);
   };
@@ -102,41 +101,21 @@ export default function HomePage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-100">
-      {/* HEADER */}
-      <header className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-          <h1 className="text-xl font-bold">LocalDeals</h1>
-
-          <div className="flex gap-3">
-            <Link
-              href="/signup"
-              className="border px-4 py-2 rounded hover:bg-gray-100"
-            >
-              Business Signup
-            </Link>
-            <Link
-              href="/login"
-              className="bg-black text-white px-4 py-2 rounded"
-            >
-              Login
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* HERO */}
-      <section className="max-w-6xl mx-auto px-4 py-6">
-        <div className="bg-black text-white rounded-xl p-6 flex flex-col md:flex-row justify-between items-center gap-4">
+    <main className="min-h-screen bg-[var(--bg-main)]">
+      {/* HERO / LOCATION */}
+      <section className="max-w-7xl mx-auto px-4 pt-6">
+        <div className="bg-black text-white rounded-3xl p-6 md:p-10 shadow-xl flex flex-col md:flex-row gap-6 md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold mb-1">
-              Local Deals Near You
-            </h2>
-            <p className="text-gray-300">
-              Discover the best offers from nearby businesses
+            <h1 className="font-extrabold text-3xl md:text-5xl leading-tight">
+              Local Deals <br className="hidden md:block" />
+              Near You
+            </h1>
+
+            <p className="text-gray-300 mt-2 max-w-md">
+              Discover exclusive offers from nearby businesses in real time.
             </p>
 
-            <div className="flex items-center gap-2 mt-2 text-sm text-gray-300">
+            <div className="flex items-center gap-2 mt-4 text-sm text-gray-300">
               <MapPin size={16} />
               {locLoading && 'Detecting your location…'}
               {!locLoading && city && `Showing deals near ${city}`}
@@ -146,7 +125,7 @@ export default function HomePage() {
 
           <Link
             href="/signup"
-            className="flex items-center gap-2 bg-white text-black px-5 py-3 rounded font-semibold"
+            className="inline-flex items-center gap-2 bg-white text-black px-6 py-4 rounded-2xl font-bold shadow hover:scale-[1.03] transition"
           >
             <Store size={20} />
             Business Signup
@@ -155,7 +134,7 @@ export default function HomePage() {
       </section>
 
       {/* DEAL LIST */}
-      <section className="max-w-6xl mx-auto px-4 pb-10">
+      <section className="max-w-7xl mx-auto px-4 pt-8 pb-14">
         {loading && (
           <p className="text-gray-500">Loading deals…</p>
         )}
@@ -166,32 +145,34 @@ export default function HomePage() {
           </p>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {deals.map((deal) => (
             <div
               key={deal.id}
               onClick={() => handleClick(deal.id)}
-              className="bg-white p-5 rounded-lg shadow hover:shadow-lg transition cursor-pointer"
+              className="card cursor-pointer"
             >
-              <h3 className="font-semibold text-lg">
+              <h3 className="font-semibold text-lg text-gray-900">
                 {deal.title}
               </h3>
 
-              <p className="text-gray-700 mt-1">
+              <p className="mt-1 text-gray-600">
                 {deal.description}
               </p>
 
-              <p className="text-sm text-gray-500 mt-2">
-                {deal.city ?? 'Unknown city'} • Valid till{' '}
-                {deal.valid_till_date ?? 'No expiry'}
+              <p className="mt-3 text-sm text-gray-500">
+                {deal.city ?? 'Unknown city'} •{' '}
+                {deal.valid_till_date
+                  ? `Valid till ${deal.valid_till_date}`
+                  : 'No expiry'}
               </p>
 
-              <div className="flex gap-4 text-xs text-gray-400 mt-3">
+              <div className="flex items-center gap-4 mt-4 text-xs text-gray-400">
                 <span className="flex items-center gap-1">
-                  <Eye size={14} /> {deal.views} views
+                  <Eye size={14} /> {deal.views}
                 </span>
                 <span className="flex items-center gap-1">
-                  <MousePointerClick size={14} /> {deal.clicks} clicks
+                  <MousePointerClick size={14} /> {deal.clicks}
                 </span>
               </div>
             </div>

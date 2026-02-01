@@ -15,26 +15,21 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Local Deals",
-  description: "Find and post local business deals near you",
+  description: "Discover premium local deals near you",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-100`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* GLOBAL NAVBAR */}
         <Navbar />
-
-        {/* PAGE CONTENT */}
-        <main className="max-w-6xl mx-auto">
-          {children}
-        </main>
+        <main className="app-container">{children}</main>
       </body>
     </html>
   );

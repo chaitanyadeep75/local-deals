@@ -24,7 +24,6 @@ export default function Navbar() {
 
     getSession();
 
-    // Listen to auth changes (login / logout)
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setLoggedIn(!!session);
@@ -36,70 +35,83 @@ export default function Navbar() {
     };
   }, []);
 
-  // ⛔ Prevent navbar flicker / wrong state
   if (loading) return null;
 
   return (
-    <nav className="w-full bg-white shadow-sm border-b">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b shadow-md">
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* LOGO */}
         <Link
           href="/"
-          className="flex items-center gap-2 font-bold text-lg"
+          className="flex items-center gap-2 font-extrabold text-lg tracking-tight"
         >
-          <Store size={22} />
-          LocalDeals
+          <div className="bg-black text-white p-2 rounded-xl shadow">
+            <Store size={20} />
+          </div>
+          <span>
+            Local<span className="text-green-600">Deals</span>
+          </span>
         </Link>
 
-        {/* NAV LINKS */}
-        <div className="flex items-center gap-4">
+        {/* NAV ACTIONS */}
+        <div className="flex items-center gap-2 md:gap-3">
+          {/* HOME */}
           <Link
             href="/"
-            className="flex items-center gap-1 text-gray-700 hover:text-black"
+            className="hidden md:flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100"
           >
-            <Home size={18} /> Home
+            <Home size={18} />
+            Home
           </Link>
 
           {!loggedIn && (
             <>
+              {/* BUSINESS SIGNUP */}
               <Link
                 href="/signup"
-                className="flex items-center gap-1 text-gray-700 hover:text-black"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white font-semibold shadow hover:shadow-lg transition"
               >
-                <Store size={18} /> Business Signup
+                <Store size={18} />
+                <span className="hidden sm:inline">Business</span>
               </Link>
 
+              {/* LOGIN */}
               <Link
                 href="/login"
-                className="flex items-center gap-1 bg-black text-white px-3 py-2 rounded"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 font-semibold hover:bg-gray-100 transition"
               >
-                <LogIn size={18} /> Login
+                <LogIn size={18} />
+                <span className="hidden sm:inline">Login</span>
               </Link>
             </>
           )}
 
           {loggedIn && (
             <>
+              {/* DASHBOARD */}
               <Link
                 href="/business/dashboard"
-                className="flex items-center gap-1 text-gray-700 hover:text-black"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-black text-white font-semibold shadow hover:shadow-lg transition"
               >
-                <LayoutDashboard size={18} /> Dashboard
+                <LayoutDashboard size={18} />
+                <span className="hidden sm:inline">Dashboard</span>
               </Link>
 
+              {/* LOGOUT */}
               <button
                 onClick={async () => {
                   await supabase.auth.signOut();
                   window.location.href = '/';
                 }}
-                className="flex items-center gap-1 bg-red-500 text-white px-3 py-2 rounded"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500 text-white font-semibold shadow hover:shadow-lg transition"
               >
-                <LogOut size={18} /> Logout
+                <LogOut size={18} />
+                <span className="hidden sm:inline">Logout</span>
               </button>
             </>
           )}
         </div>
       </div>
-    </nav>
+    </header>
   );
 }
