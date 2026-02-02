@@ -1,116 +1,58 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { Home, Map, LayoutDashboard, LogOut } from 'lucide-react';
 import { supabase } from '@/app/lib/supabase';
-import {
-  Store,
-  LogIn,
-  Home,
-  LayoutDashboard,
-  LogOut,
-} from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
-  const [loading, setLoading] = useState(true);
-  const [loggedIn, setLoggedIn] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
 
-  useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setLoggedIn(!!data.session);
-      setLoading(false);
-    };
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
-    getSession();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setLoggedIn(!!session);
-      }
+  const navItem = (href: string, label: string, Icon: any) => {
+    const active = pathname === href;
+    return (
+      <Link
+        href={href}
+        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition
+          ${active ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-100'}
+        `}
+      >
+        <Icon size={18} />
+        {label}
+      </Link>
     );
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  if (loading) return null;
+  };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b shadow-md">
+    <header className="sticky top-0 z-50 bg-white border-b">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        {/* LOGO */}
-        <Link
-          href="/"
-          className="flex items-center gap-2 font-extrabold text-lg tracking-tight"
-        >
-          <div className="bg-black text-white p-2 rounded-xl shadow">
-            <Store size={20} />
+        <Link href="/" className="flex items-center gap-2 font-bold text-lg">
+          <div className="w-8 h-8 bg-black text-white rounded flex items-center justify-center">
+            L
           </div>
-          <span>
-            Local<span className="text-green-600">Deals</span>
-          </span>
+          LocalDeals
         </Link>
 
-        {/* NAV ACTIONS */}
-        <div className="flex items-center gap-2 md:gap-3">
-          {/* HOME */}
-          <Link
-            href="/"
-            className="hidden md:flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100"
+        <nav className="flex items-center gap-2">
+          {navItem('/', 'Home', Home)}
+          {navItem('/map', 'Map', Map)}
+          {navItem('/business/dashboard', 'Dashboard', LayoutDashboard)}
+
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg"
           >
-            <Home size={18} />
-            Home
-          </Link>
-
-          {!loggedIn && (
-            <>
-              {/* BUSINESS SIGNUP */}
-              <Link
-                href="/signup"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white font-semibold shadow hover:shadow-lg transition"
-              >
-                <Store size={18} />
-                <span className="hidden sm:inline">Business</span>
-              </Link>
-
-              {/* LOGIN */}
-              <Link
-                href="/login"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 font-semibold hover:bg-gray-100 transition"
-              >
-                <LogIn size={18} />
-                <span className="hidden sm:inline">Login</span>
-              </Link>
-            </>
-          )}
-
-          {loggedIn && (
-            <>
-              {/* DASHBOARD */}
-              <Link
-                href="/business/dashboard"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-black text-white font-semibold shadow hover:shadow-lg transition"
-              >
-                <LayoutDashboard size={18} />
-                <span className="hidden sm:inline">Dashboard</span>
-              </Link>
-
-              {/* LOGOUT */}
-              <button
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  window.location.href = '/';
-                }}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500 text-white font-semibold shadow hover:shadow-lg transition"
-              >
-                <LogOut size={18} />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
-            </>
-          )}
-        </div>
+            <LogOut size={18} />
+            Logout
+          </button>
+        </nav>
       </div>
     </header>
   );
