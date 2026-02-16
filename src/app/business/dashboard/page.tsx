@@ -7,12 +7,10 @@ import {
   Plus,
   Trash2,
   Pencil,
-  Save,
-  X,
   Eye,
   MousePointerClick,
-  MapPin,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 type Deal = {
   id: number;
@@ -21,8 +19,8 @@ type Deal = {
   valid_till_date: string | null;
   views: number;
   clicks: number;
-  city: string | null;
-  area: string | null;
+  category: string | null;
+  image: string | null;
 };
 
 export default function BusinessDashboard() {
@@ -31,9 +29,12 @@ export default function BusinessDashboard() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [validTillDate, setValidTillDate] = useState('');
+  const [category, setCategory] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const [myDeals, setMyDeals] = useState<Deal[]>([]);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
 
   const totalViews = myDeals.reduce((a, b) => a + b.views, 0);
   const totalClicks = myDeals.reduce((a, b) => a + b.clicks, 0);
@@ -53,7 +54,7 @@ export default function BusinessDashboard() {
     const { data } = await supabase
       .from('deals')
       .select(
-        'id, title, description, valid_till_date, views, clicks, city, area'
+        'id, title, description, valid_till_date, views, clicks, category, image'
       )
       .eq('user_id', auth.user.id)
       .order('created_at', { ascending: false });
@@ -72,16 +73,36 @@ export default function BusinessDashboard() {
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return;
 
+    let imageUrl: string | null = null;
+
+    if (imageFile) {
+      const fileName = `${Date.now()}-${imageFile.name}`;
+      await supabase.storage
+        .from('deal-images')
+        .upload(fileName, imageFile);
+
+      const { data } = supabase.storage
+        .from('deal-images')
+        .getPublicUrl(fileName);
+
+      imageUrl = data.publicUrl;
+    }
+
     await supabase.from('deals').insert({
       title,
       description,
       valid_till_date: validTillDate || null,
+      category: category || null,
+      image: imageUrl,
       user_id: auth.user.id,
     });
 
     setTitle('');
     setDescription('');
     setValidTillDate('');
+    setCategory('');
+    setImageFile(null);
+
     fetchMyDeals();
   };
 
@@ -89,8 +110,20 @@ export default function BusinessDashboard() {
   const handleUpdateDeal = async () => {
     if (!editingDeal) return;
 
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return;
+    let updatedImage = editingDeal.image;
+
+    if (editImageFile) {
+      const fileName = `${Date.now()}-${editImageFile.name}`;
+      await supabase.storage
+        .from('deal-images')
+        .upload(fileName, editImageFile);
+
+      const { data } = supabase.storage
+        .from('deal-images')
+        .getPublicUrl(fileName);
+
+      updatedImage = data.publicUrl;
+    }
 
     await supabase
       .from('deals')
@@ -98,59 +131,70 @@ export default function BusinessDashboard() {
         title: editingDeal.title,
         description: editingDeal.description,
         valid_till_date: editingDeal.valid_till_date,
+        category: editingDeal.category,
+        image: updatedImage,
       })
-      .eq('id', editingDeal.id)
-      .eq('user_id', auth.user.id);
+      .eq('id', editingDeal.id);
 
     setEditingDeal(null);
+    setEditImageFile(null);
     fetchMyDeals();
   };
 
   /* ---------------- DELETE DEAL ---------------- */
   const handleDeleteDeal = async (id: number) => {
     if (!confirm('Delete this deal?')) return;
-
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return;
-
-    await supabase
-      .from('deals')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', auth.user.id);
-
+    await supabase.from('deals').delete().eq('id', id);
     fetchMyDeals();
   };
 
   return (
-    <main className="min-h-screen bg-gray-100 p-4 md:p-6">
-      {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl p-5 shadow">
-          <p className="text-sm text-gray-500">Total Deals</p>
-          <h2 className="text-2xl font-bold">{myDeals.length}</h2>
-        </div>
-        <div className="bg-white rounded-xl p-5 shadow">
-          <p className="text-sm text-gray-500">Views</p>
-          <h2 className="text-2xl font-bold">{totalViews}</h2>
-        </div>
-        <div className="bg-white rounded-xl p-5 shadow">
-          <p className="text-sm text-gray-500">Clicks</p>
-          <h2 className="text-2xl font-bold">{totalClicks}</h2>
+    <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-6 pb-16">
+
+      {/* HERO */}
+      <div className="relative rounded-3xl overflow-hidden mb-8 mt-6 shadow-xl">
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 opacity-95" />
+        <div className="relative p-10 text-white">
+          <h1 className="text-4xl font-bold">
+            Business Dashboard 🚀
+          </h1>
+          <p className="mt-3 text-white/90">
+            Manage and grow your deals effortlessly
+          </p>
         </div>
       </div>
 
-      {/* ADD DEAL (UNCHANGED UI) */}
+      {/* STATS */}
+      <div className="grid md:grid-cols-3 gap-6 mb-8">
+        {[ 
+          { label: 'Total Deals', value: myDeals.length },
+          { label: 'Total Views', value: totalViews },
+          { label: 'Total Clicks', value: totalClicks },
+        ].map((item, i) => (
+          <motion.div
+            key={i}
+            whileHover={{ scale: 1.05 }}
+            className="bg-white rounded-2xl shadow-lg p-6"
+          >
+            <p className="text-gray-500">{item.label}</p>
+            <h2 className="text-3xl font-bold mt-2">
+              {item.value}
+            </h2>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* ADD DEAL FORM */}
       <form
         onSubmit={handleAddDeal}
-        className="bg-white rounded-xl shadow p-6 mb-6"
+        className="bg-white rounded-2xl shadow-xl p-8 mb-10"
       >
-        <h2 className="font-semibold mb-4 flex items-center gap-2">
+        <h2 className="text-xl font-semibold mb-6 flex gap-2 items-center">
           <Plus size={18} /> Add New Deal
         </h2>
 
         <input
-          className="w-full p-3 border rounded mb-3"
+          className="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-purple-500 outline-none"
           placeholder="Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -158,86 +202,129 @@ export default function BusinessDashboard() {
         />
 
         <textarea
-          className="w-full p-3 border rounded mb-3"
+          className="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-purple-500 outline-none"
           placeholder="Description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
 
+        <select
+          className="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-purple-500 outline-none"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          <option value="">Select Category</option>
+          <option value="food">Food</option>
+          <option value="spa">Spa</option>
+          <option value="electronics">Electronics</option>
+          <option value="fashion">Fashion</option>
+          <option value="automobile">Automobile</option>
+          <option value="fitness">Fitness</option>
+        </select>
+
         <input
           type="date"
-          className="w-full p-3 border rounded mb-4"
+          className="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-purple-500 outline-none"
           value={validTillDate}
           onChange={(e) => setValidTillDate(e.target.value)}
         />
 
-        <button className="w-full bg-black text-white py-3 rounded">
+        <input
+          type="file"
+          accept="image/*"
+          className="w-full mb-6"
+          onChange={(e) =>
+            e.target.files &&
+            setImageFile(e.target.files[0])
+          }
+        />
+
+        <button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-xl font-semibold hover:opacity-90 transition">
           Add Deal
         </button>
       </form>
 
       {/* DEAL LIST */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {myDeals.map((deal) => (
-          <div
+          <motion.div
             key={deal.id}
-            className="bg-white rounded-xl shadow p-5"
+            whileHover={{ scale: 1.02 }}
+            className="bg-white rounded-2xl shadow-lg p-6"
           >
-            <h3 className="font-semibold text-lg">{deal.title}</h3>
-            <p className="text-gray-600">{deal.description}</p>
+            {deal.image && (
+              <img
+                src={deal.image}
+                alt="deal"
+                className="w-full h-48 object-cover rounded-xl mb-4"
+              />
+            )}
 
-            <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-              <MapPin size={14} />
-              {deal.area
-                ? `${deal.area}, ${deal.city}`
-                : deal.city || 'Nearby'}
+            <h3 className="text-xl font-semibold">
+              {deal.title}
+            </h3>
+            <p className="text-gray-600">
+              {deal.description}
             </p>
 
-            <div className="flex gap-4 text-xs text-gray-500 mt-2">
+            {deal.category && (
+              <p className="text-sm text-purple-600 mt-1">
+                Category: {deal.category}
+              </p>
+            )}
+
+            <div className="flex gap-6 mt-3 text-sm text-gray-500">
               <span className="flex items-center gap-1">
-                <Eye size={14} /> {deal.views}
+                <Eye size={16} /> {deal.views}
               </span>
               <span className="flex items-center gap-1">
-                <MousePointerClick size={14} /> {deal.clicks}
+                <MousePointerClick size={16} />{' '}
+                {deal.clicks}
               </span>
             </div>
 
-            <div className="flex gap-4 mt-3">
+            <div className="flex gap-6 mt-4">
               <button
                 onClick={() => setEditingDeal(deal)}
-                className="flex items-center gap-1 text-blue-600"
+                className="text-blue-600 flex items-center gap-1"
               >
                 <Pencil size={16} /> Edit
               </button>
+
               <button
-                onClick={() => handleDeleteDeal(deal.id)}
-                className="flex items-center gap-1 text-red-600"
+                onClick={() =>
+                  handleDeleteDeal(deal.id)
+                }
+                className="text-red-600 flex items-center gap-1"
               >
                 <Trash2 size={16} /> Delete
               </button>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
       {/* EDIT MODAL */}
       {editingDeal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h2 className="font-semibold mb-4 flex items-center gap-2">
-              <Pencil size={18} /> Edit Deal
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
+            <h2 className="text-xl font-semibold mb-4">
+              Edit Deal
             </h2>
 
             <input
-              className="w-full p-3 border rounded mb-3"
+              className="w-full p-3 border rounded-xl mb-3"
               value={editingDeal.title}
               onChange={(e) =>
-                setEditingDeal({ ...editingDeal, title: e.target.value })
+                setEditingDeal({
+                  ...editingDeal,
+                  title: e.target.value,
+                })
               }
             />
 
             <textarea
-              className="w-full p-3 border rounded mb-3"
+              className="w-full p-3 border rounded-xl mb-3"
               value={editingDeal.description}
               onChange={(e) =>
                 setEditingDeal({
@@ -248,29 +335,27 @@ export default function BusinessDashboard() {
             />
 
             <input
-              type="date"
-              className="w-full p-3 border rounded mb-4"
-              value={editingDeal.valid_till_date || ''}
+              type="file"
+              accept="image/*"
+              className="w-full mb-4"
               onChange={(e) =>
-                setEditingDeal({
-                  ...editingDeal,
-                  valid_till_date: e.target.value || null,
-                })
+                e.target.files &&
+                setEditImageFile(e.target.files[0])
               }
             />
 
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 onClick={handleUpdateDeal}
-                className="flex-1 bg-black text-white py-3 rounded flex justify-center gap-2"
+                className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl"
               >
-                <Save size={16} /> Save
+                Save
               </button>
               <button
                 onClick={() => setEditingDeal(null)}
-                className="flex-1 border py-3 rounded flex justify-center gap-2"
+                className="flex-1 border py-3 rounded-xl"
               >
-                <X size={16} /> Cancel
+                Cancel
               </button>
             </div>
           </div>
