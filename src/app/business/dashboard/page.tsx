@@ -219,6 +219,7 @@ export default function BusinessDashboard() {
           <option value="electronics">Electronics</option>
           <option value="fashion">Fashion</option>
           <option value="automobile">Automobile</option>
+          <option value="rental bikes and cars">Rental Bikes and Cars</option>
           <option value="fitness">Fitness</option>
         </select>
 

@@ -30,6 +30,7 @@ const categories = [
   'Gym',
   'Pub',
   'Beauty',
+  'Rental bikes and cars',
   'Shopping',
   'Services',
   'Auto',
