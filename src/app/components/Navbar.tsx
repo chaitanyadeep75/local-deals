@@ -1,75 +1,146 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LayoutDashboard, LogOut } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { User, Mail, Phone } from 'lucide-react';
 import { supabase } from '@/app/lib/supabase';
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  /* ================= CHECK AUTH ================= */
   useEffect(() => {
-    // initial session
-    supabase.auth.getSession().then(({ data }) => {
-      setIsLoggedIn(!!data.session);
-    });
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
 
-    // listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsLoggedIn(!!session);
-    });
+    checkUser();
 
-    return () => subscription.unsubscribe();
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
+  /* ================= LOGOUT ================= */
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    setUser(null);
+    router.push('/login');
   };
 
-  const navItem = (href: string, label: string) => (
-    <Link
-      href={href}
-      className={`px-4 py-2 rounded-lg ${
-        pathname === href ? 'bg-black text-white' : 'text-gray-700'
-      }`}
-    >
-      {label}
-    </Link>
-  );
+  /* ================= CLOSE ON OUTSIDE CLICK ================= */
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b">
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg">LocalDeals</Link>
+    <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-gray-200">
+      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 
-        <nav className="flex items-center gap-2">
-          {navItem('/', 'Home')}
+        {/* BRAND */}
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-transparent">
+          LocalDeals ✨
+        </h1>
 
-          {isLoggedIn ? (
-            <>
-              {navItem('/business/dashboard', 'Dashboard')}
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
+        <div className="flex items-center gap-4 relative">
+
+          <Link href="/" className="px-4 py-2 rounded-full hover:bg-gray-100">
+            Home
+          </Link>
+
+          {/* SHOW ONLY IF LOGGED IN */}
+          {user && (
+            <Link
+              href="/business/dashboard"
+              className="px-4 py-2 rounded-full hover:bg-gray-100"
+            >
+              Dashboard
+            </Link>
+          )}
+
+          {/* AUTH BUTTON */}
+          {!user ? (
             <Link
               href="/login"
-              className="bg-black text-white px-4 py-2 rounded-lg"
+              className="px-4 py-2 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition"
             >
               Login
             </Link>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition"
+            >
+              Logout
+            </button>
           )}
-        </nav>
+
+          {/* PROFILE ICON (ONLY IF LOGGED IN) */}
+          {user && (
+            <div ref={dropdownRef} className="relative">
+              <button
+                onClick={() => setOpen(!open)}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md"
+              >
+                <User size={18} />
+              </button>
+
+              {open && (
+                <div className="absolute right-0 top-14 w-72 bg-white rounded-xl shadow-xl border border-gray-200 p-5">
+                  <h3 className="font-semibold text-lg mb-3">
+                    👋 Chaitanya Deep
+                  </h3>
+
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                    <Mail size={16} />
+                    chaitanyadeep75@gmail.com
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Phone size={16} />
+                    9963225519
+                  </div>
+
+                  <button
+                    onClick={handleLogout}
+                    className="mt-4 w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
