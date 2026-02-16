@@ -29,6 +29,7 @@ const categories = [
   'Spa',
   'Gym',
   'Pub',
+  'Fashion',
   'Beauty',
   'Rental bikes and cars',
   'Shopping',
