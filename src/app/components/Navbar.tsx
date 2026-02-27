@@ -1,35 +1,50 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { User, Mail, LogOut, LayoutDashboard, Bookmark } from 'lucide-react';
 import { supabase } from '@/app/lib/supabase';
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isBusiness, setIsBusiness] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const detectIsBusiness = async (nextUser: SupabaseUser) => {
+      const role = nextUser?.user_metadata?.role;
+      if (role === 'business') return true;
+      if (role === 'user') return false;
+      const hint = typeof window !== 'undefined' ? localStorage.getItem('ld_role_hint') : null;
+      if (hint === 'business') return true;
+      if (hint === 'user') return false;
+      const { count } = await supabase
+        .from('deals')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', nextUser.id);
+      return (count || 0) > 0;
+    };
+
     const checkUser = async () => {
       const { data } = await supabase.auth.getUser();
       if (data.user) {
         setUser(data.user);
-        // Check if business: has no 'role: user' metadata OR has a deal in the DB
-        const role = data.user.user_metadata?.role;
-        setIsBusiness(role !== 'user');
+        setIsBusiness(await detectIsBusiness(data.user));
       }
     };
     checkUser();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        const role = session.user.user_metadata?.role;
-        setIsBusiness(role !== 'user');
+        setIsBusiness(await detectIsBusiness(session.user));
+      } else {
+        setIsBusiness(false);
       }
     });
     return () => listener.subscription.unsubscribe();
@@ -37,6 +52,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem('ld_role_hint');
     setUser(null);
     router.push('/');
   };
@@ -52,6 +68,8 @@ export default function Navbar() {
   const displayName = user?.user_metadata?.full_name
     || (user?.email?.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()))
     || '';
+  const isBusinessView = pathname?.startsWith('/business');
+  const showBusinessNav = isBusiness || isBusinessView;
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-gray-200">
@@ -69,7 +87,7 @@ export default function Navbar() {
           </Link>
 
           {/* Business nav */}
-          {user && isBusiness && (
+          {user && showBusinessNav && (
             <Link href="/business/dashboard"
               className="px-3 py-2 rounded-full hover:bg-gray-100 text-sm font-medium flex items-center gap-1.5">
               <LayoutDashboard size={15} />
@@ -78,7 +96,7 @@ export default function Navbar() {
           )}
 
           {/* User nav */}
-          {user && !isBusiness && (
+          {user && !showBusinessNav && (
             <Link href="/user/profile"
               className="px-3 py-2 rounded-full hover:bg-gray-100 text-sm font-medium flex items-center gap-1.5">
               <Bookmark size={15} />
@@ -109,7 +127,7 @@ export default function Navbar() {
               <div ref={dropdownRef} className="relative">
                 <button onClick={() => setOpen(!open)}
                   className={`w-10 h-10 flex items-center justify-center rounded-full text-white shadow-md font-bold transition hover:scale-105
-                    ${isBusiness
+                    ${showBusinessNav
                       ? 'bg-gradient-to-r from-purple-500 to-indigo-500'
                       : 'bg-gradient-to-r from-emerald-400 to-teal-500'
                     }`}
@@ -122,14 +140,14 @@ export default function Navbar() {
                     {/* Role badge */}
                     <div className="flex items-center justify-between mb-3">
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full
-                        ${isBusiness ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                        {isBusiness ? '🏪 Business' : '👤 User'}
+                        ${showBusinessNav ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {showBusinessNav ? '🏪 Business' : '👤 User'}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-3 mb-4">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0
-                        ${isBusiness ? 'bg-gradient-to-br from-purple-500 to-indigo-500' : 'bg-gradient-to-br from-emerald-400 to-teal-500'}`}>
+                        ${showBusinessNav ? 'bg-gradient-to-br from-purple-500 to-indigo-500' : 'bg-gradient-to-br from-emerald-400 to-teal-500'}`}>
                         {displayName.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
@@ -140,7 +158,7 @@ export default function Navbar() {
                       </div>
                     </div>
 
-                    {isBusiness ? (
+                    {showBusinessNav ? (
                       <Link href="/business/dashboard" onClick={() => setOpen(false)}
                         className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition mb-2">
                         <LayoutDashboard size={15} className="text-purple-500" />

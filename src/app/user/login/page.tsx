@@ -19,11 +19,38 @@ export default function UserLoginPage() {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) { setError(error.message); return; }
-    router.push('/user/profile');
+    if (error) {
+      setLoading(false);
+      setError(error.message);
+      return;
+    }
+
+    const role = data.user?.user_metadata?.role;
+    if (role === 'business') {
+      await supabase.auth.signOut();
+      setLoading(false);
+      setError('This is a business account. Please use Business Login.');
+      return;
+    }
+
+    if (role !== 'user') {
+      const { count } = await supabase
+        .from('deals')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', data.user.id);
+      if ((count || 0) > 0) {
+        await supabase.auth.signOut();
+        setLoading(false);
+        setError('This is a business account. Please use Business Login.');
+        return;
+      }
+    }
+
+    setLoading(false);
+    localStorage.setItem('ld_role_hint', 'user');
+    router.push('/');
   };
 
   return (

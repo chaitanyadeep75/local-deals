@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
-import { MapPin, Eye, MousePointerClick, Navigation, Bookmark, BookmarkCheck } from 'lucide-react';
+import { MapPin, Eye, MousePointerClick, Navigation, Bookmark, BookmarkCheck, MessageSquare } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 type Deal = {
@@ -37,6 +37,9 @@ export default function DealCard({ deal }: { deal: Deal }) {
   const [savedId, setSavedId] = useState<number | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
 
   const canNavigate = !!(deal.latitude && deal.longitude);
   const label = locationLabel(deal);
@@ -86,15 +89,64 @@ export default function DealCard({ deal }: { deal: Deal }) {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${deal.latitude},${deal.longitude}`, '_blank');
   };
 
-  const submitRating = async (e: React.MouseEvent, value: number) => {
-    e.stopPropagation();
+  const syncDealRating = async () => {
+    const { data: allReviews } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('deal_id', deal.id);
+
+    const count = allReviews?.length || 0;
+    const avg = count
+      ? allReviews!.reduce((sum, r) => sum + (r.rating || 0), 0) / count
+      : 0;
+
+    await supabase
+      .from('deals')
+      .update({ rating: avg || null, rating_count: count })
+      .eq('id', deal.id);
+  };
+
+  const upsertReview = async (value: number, comment = '') => {
+    if (!userId) { router.push('/user/login'); return; }
     if (submitting) return;
     setSubmitting(true);
-    const currentRating = deal.rating || 0;
-    const currentCount = deal.rating_count || 0;
-    const newAverage = (currentRating * currentCount + value) / (currentCount + 1);
-    await supabase.from('deals').update({ rating: newAverage, rating_count: currentCount + 1 }).eq('id', deal.id);
-    window.location.reload();
+    try {
+      const { data: existing } = await supabase
+        .from('reviews')
+        .select('id')
+        .eq('deal_id', deal.id)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existing?.id) {
+        await supabase
+          .from('reviews')
+          .update({ rating: value, comment: comment || null })
+          .eq('id', existing.id);
+      } else {
+        await supabase
+          .from('reviews')
+          .insert({ deal_id: deal.id, user_id: userId, rating: value, comment: comment || null });
+      }
+
+      await syncDealRating();
+      setReviewOpen(false);
+      setReviewComment('');
+      setReviewRating(5);
+      window.location.reload();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitRating = async (e: React.MouseEvent, value: number) => {
+    e.stopPropagation();
+    await upsertReview(value);
+  };
+
+  const submitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await upsertReview(reviewRating, reviewComment.trim());
   };
 
   return (
@@ -162,11 +214,72 @@ export default function DealCard({ deal }: { deal: Deal }) {
           </span>
         </div>
 
+        <button
+          onClick={(e) => { e.stopPropagation(); setReviewOpen(true); }}
+          className="mt-2 text-xs text-purple-600 font-medium inline-flex items-center gap-1 hover:text-purple-700"
+        >
+          <MessageSquare size={13} />
+          Write review
+        </button>
+
         <div className="flex gap-4 mt-3 text-xs text-gray-400">
           <span className="flex items-center gap-1"><Eye size={13} /> {deal.views || 0}</span>
           <span className="flex items-center gap-1"><MousePointerClick size={13} /> {deal.clicks || 0}</span>
         </div>
       </div>
+
+      {reviewOpen && (
+        <div className="fixed inset-0 bg-black/45 z-50 flex items-center justify-center p-4" onClick={() => setReviewOpen(false)}>
+          <form
+            onSubmit={submitReview}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl w-full max-w-md p-5 shadow-2xl"
+          >
+            <h4 className="text-base font-semibold">Add your review</h4>
+            <p className="text-xs text-gray-500 mt-1 mb-3 line-clamp-1">{deal.title}</p>
+
+            <div className="flex items-center gap-1 mb-3">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  type="button"
+                  key={star}
+                  onClick={() => setReviewRating(star)}
+                  className="text-2xl leading-none"
+                  style={{ color: star <= reviewRating ? '#facc15' : '#e5e7eb' }}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              className="w-full border rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-purple-500"
+              rows={4}
+              maxLength={400}
+              placeholder="Share your experience (optional)"
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+            />
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setReviewOpen(false)}
+                className="flex-1 border rounded-xl py-2.5 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 bg-purple-600 text-white rounded-xl py-2.5 text-sm disabled:opacity-60"
+              >
+                {submitting ? 'Submitting…' : 'Submit'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

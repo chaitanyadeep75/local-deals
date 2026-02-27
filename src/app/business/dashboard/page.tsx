@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { CATEGORY_OPTIONS, getCategoryLabel } from '@/app/lib/categories';
 import { useRouter } from 'next/navigation';
 import {
   Plus, Trash2, Pencil, Eye, MousePointerClick,
   MapPin, LocateFixed, AlertCircle, Info, MapPinOff,
+  Store, Phone, Globe, Instagram, BadgePercent, Ticket, FileText,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -72,7 +74,7 @@ async function reverseGeocode(lat: number, lng: number): Promise<{ label: string
   try {
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     const res = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&types=locality,place,neighborhood,address&limit=1`
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&types=address,poi,neighborhood,locality,place&limit=1`
     );
     const data = await res.json();
     const feature = data.features?.[0];
@@ -84,13 +86,22 @@ async function reverseGeocode(lat: number, lng: number): Promise<{ label: string
   }
 }
 
-async function getLocationByIP(): Promise<{ lat: number; lng: number } | null> {
+async function forwardGeocode(query: string): Promise<LocationValue | null> {
   try {
-    const res = await fetch('https://ipapi.co/json/');
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    if (!token) return null;
+    const res = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&types=address,poi,neighborhood,locality,place&limit=1&country=in`
+    );
     const data = await res.json();
-    if (data.latitude && data.longitude) return { lat: data.latitude, lng: data.longitude };
+    const feature = data.features?.[0];
+    if (!feature?.center) return null;
+    const [lng, lat] = feature.center;
+    const { area, city } = parseMapboxFeature(feature);
+    return { lat, lng, label: feature.place_name || query, area, city };
+  } catch {
     return null;
-  } catch { return null; }
+  }
 }
 
 /* ─────────────────────────────────────────
@@ -110,6 +121,10 @@ function LocationPicker({
   const [geoStatus, setGeoStatus] = useState<'idle' | 'error' | 'denied' | 'ip-fallback'>('idle');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    setQuery(value.label || '');
+  }, [value.label]);
+
   const search = async (q: string) => {
     if (!q || q.length < 3) { setSuggestions([]); return; }
     setLoading(true);
@@ -128,6 +143,8 @@ function LocationPicker({
     const v = e.target.value;
     setQuery(v);
     setGeoStatus('idle');
+    // If the user edits text manually, clear pinned coordinates until they re-select.
+    onChange({ lat: null, lng: null, label: v, area: '', city: '' });
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => search(v), 350);
   };
@@ -141,23 +158,10 @@ function LocationPicker({
     setGeoStatus('idle');
   };
 
-  const tryIPFallback = async (fromDenied = false) => {
-    const ipLoc = await getLocationByIP();
-    if (ipLoc) {
-      const geo = await reverseGeocode(ipLoc.lat, ipLoc.lng);
-      onChange({ lat: ipLoc.lat, lng: ipLoc.lng, ...geo });
-      setQuery(geo.label);
-      setGeoStatus('ip-fallback');
-    } else {
-      setGeoStatus(fromDenied ? 'denied' : 'error');
-    }
-    setGeoLoading(false);
-  };
-
   const useCurrentLocation = () => {
     setGeoLoading(true);
     setGeoStatus('idle');
-    if (!navigator.geolocation) { tryIPFallback(); return; }
+    if (!navigator.geolocation) { setGeoStatus('error'); setGeoLoading(false); return; }
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
@@ -167,15 +171,15 @@ function LocationPicker({
         setGeoLoading(false);
         setSuggestions([]);
       },
-      async (err) => {
+      (err) => {
         if (err.code === err.PERMISSION_DENIED) {
           setGeoStatus('denied');
-          await tryIPFallback(true);
         } else {
-          await tryIPFallback();
+          setGeoStatus('error');
         }
+        setGeoLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
   };
 
@@ -276,7 +280,7 @@ function EditLocationModal({ deal, onSave, onClose }: { deal: Deal; onSave: () =
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!location.lat || !location.lng) return;
+    if (location.lat === null || location.lng === null) return;
     setSaving(true);
     await supabase.from('deals').update({
       latitude: location.lat,
@@ -320,8 +324,23 @@ function EditLocationModal({ deal, onSave, onClose }: { deal: Deal; onSave: () =
 ───────────────────────────────────────── */
 export default function BusinessDashboard() {
   const router = useRouter();
+  const [shopName, setShopName] = useState('');
+  const [shopPhone, setShopPhone] = useState('');
+  const [shopWhatsapp, setShopWhatsapp] = useState('');
+  const [shopWebsite, setShopWebsite] = useState('');
+  const [shopInstagram, setShopInstagram] = useState('');
+  const [shopAbout, setShopAbout] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMsg, setProfileMsg] = useState<string | null>(null);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [offerPrice, setOfferPrice] = useState('');
+  const [originalPrice, setOriginalPrice] = useState('');
+  const [discountLabel, setDiscountLabel] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [redemption, setRedemption] = useState('in-store');
+  const [terms, setTerms] = useState('');
   const [validTillDate, setValidTillDate] = useState('');
   const [category, setCategory] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -331,16 +350,53 @@ export default function BusinessDashboard() {
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editingLocation, setEditingLocation] = useState<Deal | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const totalViews = myDeals.reduce((a, b) => a + b.views, 0);
   const totalClicks = myDeals.reduce((a, b) => a + b.clicks, 0);
-  const missingLocation = myDeals.filter(d => !d.latitude || !d.longitude).length;
+  const missingLocation = myDeals.filter(d => d.latitude === null || d.longitude === null).length;
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.replace('/login');
-    });
+    const init = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) { router.replace('/login'); return; }
+      const role = data.session.user.user_metadata?.role;
+      if (role === 'user') { router.replace('/user/profile'); return; }
+
+      const profile = (data.session.user.user_metadata?.business_profile || {}) as Record<string, string>;
+      setShopName(profile.shop_name || '');
+      setShopPhone(profile.phone || '');
+      setShopWhatsapp(profile.whatsapp || '');
+      setShopWebsite(profile.website || '');
+      setShopInstagram(profile.instagram || '');
+      setShopAbout(profile.about || '');
+    };
+    init();
   }, [router]);
+
+  const saveBusinessProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileSaving(true);
+    setProfileMsg(null);
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) { setProfileSaving(false); return; }
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        ...auth.user.user_metadata,
+        role: 'business',
+        business_profile: {
+          shop_name: shopName.trim(),
+          phone: shopPhone.trim(),
+          whatsapp: shopWhatsapp.trim(),
+          website: shopWebsite.trim(),
+          instagram: shopInstagram.trim(),
+          about: shopAbout.trim(),
+        },
+      },
+    });
+    setProfileSaving(false);
+    setProfileMsg(error ? error.message : 'Profile updated');
+  };
 
   const fetchMyDeals = async () => {
     const { data: auth } = await supabase.auth.getUser();
@@ -357,7 +413,18 @@ export default function BusinessDashboard() {
 
   const handleAddDeal = async (e: React.FormEvent) => {
     e.preventDefault();
+    let finalLocation = location;
+    if ((finalLocation.lat === null || finalLocation.lng === null) && finalLocation.label.trim()) {
+      const resolved = await forwardGeocode(finalLocation.label.trim());
+      if (resolved) finalLocation = resolved;
+    }
+
+    if (finalLocation.lat === null || finalLocation.lng === null) {
+      setLocationError('Please select a valid location from suggestions or use current location.');
+      return;
+    }
     setSubmitting(true);
+    setLocationError(null);
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) { setSubmitting(false); return; }
 
@@ -369,19 +436,56 @@ export default function BusinessDashboard() {
       imageUrl = data.publicUrl;
     }
 
-    await supabase.from('deals').insert({
-      title, description,
-      valid_till_date: validTillDate || null,
-      category: category || null,
-      image: imageUrl,
-      user_id: auth.user.id,
-      latitude: location.lat,
-      longitude: location.lng,
-      area: location.area || null,
-      city: location.city || null,
-    });
+    const { data: inserted, error: insertError } = await supabase
+      .from('deals')
+      .insert({
+        title,
+        description: [
+          description.trim(),
+          offerPrice ? `Offer Price: ${offerPrice}` : '',
+          originalPrice ? `Original Price: ${originalPrice}` : '',
+          discountLabel ? `Discount: ${discountLabel}` : '',
+          couponCode ? `Coupon: ${couponCode}` : '',
+          redemption ? `Redeem: ${redemption}` : '',
+          terms ? `Terms: ${terms}` : '',
+        ].filter(Boolean).join('\n'),
+        valid_till_date: validTillDate || null,
+        category: category || null,
+        image: imageUrl,
+        user_id: auth.user.id,
+        latitude: finalLocation.lat,
+        longitude: finalLocation.lng,
+        area: finalLocation.area || null,
+        city: finalLocation.city || null,
+      })
+      .select('id, latitude, longitude')
+      .single();
+
+    if (insertError || !inserted) {
+      setLocationError(insertError?.message || 'Could not add deal. Please try again.');
+      setSubmitting(false);
+      return;
+    }
+
+    // Safety retry: if DB row came back without coordinates, persist again.
+    if (inserted.latitude === null || inserted.longitude === null) {
+      const { error: fixError } = await supabase
+        .from('deals')
+        .update({
+          latitude: finalLocation.lat,
+          longitude: finalLocation.lng,
+          area: finalLocation.area || null,
+          city: finalLocation.city || null,
+        })
+        .eq('id', inserted.id);
+      if (fixError) {
+        setLocationError(fixError.message || 'Deal added, but location save failed.');
+      }
+    }
 
     setTitle(''); setDescription(''); setValidTillDate(''); setCategory('');
+    setOfferPrice(''); setOriginalPrice(''); setDiscountLabel('');
+    setCouponCode(''); setRedemption('in-store'); setTerms('');
     setImageFile(null);
     setLocation({ lat: null, lng: null, label: '', area: '', city: '' });
     setSubmitting(false);
@@ -448,12 +552,51 @@ export default function BusinessDashboard() {
                 {missingLocation} deal{missingLocation > 1 ? 's' : ''} missing location
               </p>
               <p className="text-amber-700 text-xs mt-0.5">
-                Click <strong>"+ Add Location"</strong> on the cards below to pin them on the map.
+                Use <strong>Set Location</strong> on the cards below to pin them on the map.
               </p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <form onSubmit={saveBusinessProfile} className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-100">
+        <h2 className="text-xl font-semibold mb-6 flex gap-2 items-center">
+          <Store size={18} /> Business Profile
+        </h2>
+        <div className="grid md:grid-cols-2 gap-4 mb-4">
+          <input className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+            placeholder="Shop Name" value={shopName} onChange={(e) => setShopName(e.target.value)} />
+          <div className="relative">
+            <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input className="w-full p-4 pl-10 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+              placeholder="Phone Number" value={shopPhone} onChange={(e) => setShopPhone(e.target.value)} />
+          </div>
+          <input className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+            placeholder="WhatsApp Number" value={shopWhatsapp} onChange={(e) => setShopWhatsapp(e.target.value)} />
+          <div className="relative">
+            <Globe size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input className="w-full p-4 pl-10 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+              placeholder="Website URL" value={shopWebsite} onChange={(e) => setShopWebsite(e.target.value)} />
+          </div>
+          <div className="md:col-span-2 relative">
+            <Instagram size={15} className="absolute left-3 top-5 text-gray-400" />
+            <input className="w-full p-4 pl-10 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+              placeholder="Instagram handle or URL" value={shopInstagram} onChange={(e) => setShopInstagram(e.target.value)} />
+          </div>
+        </div>
+        <textarea className="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-indigo-500 outline-none"
+          placeholder="About your shop (services, timings, specialties)"
+          value={shopAbout}
+          onChange={(e) => setShopAbout(e.target.value)}
+        />
+        <div className="flex items-center gap-3">
+          <button disabled={profileSaving}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2.5 px-5 rounded-xl font-medium disabled:opacity-60">
+            {profileSaving ? 'Saving…' : 'Save Profile'}
+          </button>
+          {profileMsg && <p className="text-sm text-gray-600">{profileMsg}</p>}
+        </div>
+      </form>
 
       {/* ADD DEAL FORM */}
       <form onSubmit={handleAddDeal} className="bg-white rounded-2xl shadow-xl p-8 mb-10">
@@ -464,26 +607,64 @@ export default function BusinessDashboard() {
         <input className="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-purple-500 outline-none"
           placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
         <textarea className="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-purple-500 outline-none"
-          placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
+          placeholder="What is included in this deal?" value={description} onChange={(e) => setDescription(e.target.value)} />
+
+        <div className="grid md:grid-cols-2 gap-4 mb-4">
+          <div className="relative">
+            <BadgePercent size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input className="w-full p-4 pl-10 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+              placeholder="Discount (e.g. 40% OFF)" value={discountLabel} onChange={(e) => setDiscountLabel(e.target.value)} />
+          </div>
+          <div className="relative">
+            <Ticket size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input className="w-full p-4 pl-10 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+              placeholder="Coupon Code (optional)" value={couponCode} onChange={(e) => setCouponCode(e.target.value)} />
+          </div>
+          <input className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+            placeholder="Offer Price (e.g. ₹499)" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} />
+          <input className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+            placeholder="Original Price (e.g. ₹999)" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} />
+        </div>
+
         <select className="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-purple-500 outline-none"
           value={category} onChange={(e) => setCategory(e.target.value)}>
           <option value="">Select Category</option>
-          <option value="food">Food</option>
-          <option value="spa">Spa</option>
-          <option value="electronics">Electronics</option>
-          <option value="fashion">Fashion</option>
-          <option value="automobile">Automobile</option>
-          <option value="rental bikes and cars">Rental Bikes and Cars</option>
-          <option value="fitness">Fitness</option>
+          {CATEGORY_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
         </select>
+
+        <div className="grid md:grid-cols-2 gap-4 mb-4">
+          <select className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+            value={redemption} onChange={(e) => setRedemption(e.target.value)}>
+            <option value="in-store">In-store only</option>
+            <option value="online">Online only</option>
+            <option value="both">In-store + Online</option>
+          </select>
+          <input type="date" className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+            value={validTillDate} onChange={(e) => setValidTillDate(e.target.value)} />
+        </div>
+
+        <div className="relative mb-4">
+          <FileText size={15} className="absolute left-3 top-4 text-gray-400" />
+          <textarea className="w-full p-4 pl-10 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+            placeholder="Terms & conditions (e.g. valid Mon-Fri, one redemption per user)"
+            value={terms}
+            onChange={(e) => setTerms(e.target.value)}
+          />
+        </div>
 
         <div className="mb-4">
           <label className="text-sm font-medium text-gray-700 mb-2 block">📍 Business Location</label>
-          <LocationPicker value={location} onChange={setLocation} />
+          <LocationPicker value={location} onChange={(v) => {
+            setLocation(v);
+            if (v.lat !== null && v.lng !== null) setLocationError(null);
+          }} />
+          {locationError && (
+            <p className="text-xs text-red-600 mt-2">{locationError}</p>
+          )}
         </div>
 
-        <input type="date" className="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-purple-500 outline-none"
-          value={validTillDate} onChange={(e) => setValidTillDate(e.target.value)} />
         <input type="file" accept="image/*" className="w-full mb-6"
           onChange={(e) => e.target.files && setImageFile(e.target.files[0])} />
 
@@ -496,7 +677,7 @@ export default function BusinessDashboard() {
       {/* DEAL LIST */}
       <div className="space-y-6">
         {myDeals.map((deal) => {
-          const hasLoc = !!(deal.latitude && deal.longitude);
+          const hasLoc = deal.latitude !== null && deal.longitude !== null;
           const locText = [deal.area, deal.city].filter(Boolean).join(', ')
             || (hasLoc ? 'Coords saved (no area name)' : '');
 
@@ -510,7 +691,7 @@ export default function BusinessDashboard() {
                   <p className="text-gray-600 text-sm mt-1">{deal.description}</p>
                   {deal.category && (
                     <span className="inline-block text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full mt-1 capitalize">
-                      {deal.category}
+                      {getCategoryLabel(deal.category)}
                     </span>
                   )}
                 </div>
@@ -546,11 +727,11 @@ export default function BusinessDashboard() {
                   <Trash2 size={15} /> Delete
                 </button>
                 <button onClick={() => setEditingLocation(deal)}
-                  className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-medium transition ml-auto
+                  className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-medium transition
                     ${hasLoc ? 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200'
-                      : 'text-white bg-amber-500 hover:bg-amber-600 shadow-sm'}`}>
+                      : 'text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200'}`}>
                   <MapPin size={14} />
-                  {hasLoc ? 'Edit Location' : '+ Add Location'}
+                  {hasLoc ? 'Edit Location' : 'Set Location'}
                 </button>
               </div>
             </motion.div>

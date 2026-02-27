@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import DealCard from '@/app/components/DealCard';
+import { CATEGORY_FILTERS, categoryMatchesFilter, getCategoryLabel } from '@/app/lib/categories';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, LocateFixed, X, SlidersHorizontal, AlertCircle, Info } from 'lucide-react';
 
@@ -22,12 +23,6 @@ type Deal = {
   rating_count?: number | null;
   category?: string | null;
 };
-
-const CATEGORIES = [
-  'All', 'Food', 'Salon', 'Spa', 'Gym', 'Pub',
-  'Fashion', 'Beauty', 'Rental bikes and cars',
-  'Shopping', 'Services', 'Auto', 'Fitness',
-];
 
 const RADIUS_OPTIONS = [
   { label: '1 km', value: 1 },
@@ -63,7 +58,7 @@ type GeoStatus = 'idle' | 'loading' | 'active' | 'ip-fallback' | 'denied' | 'err
 export default function HomePage() {
   const [allDeals, setAllDeals] = useState<Deal[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [showExpired, setShowExpired] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -77,20 +72,20 @@ export default function HomePage() {
   /* ── FETCH ── */
   const fetchDeals = useCallback(async () => {
     let query = supabase.from('deals').select('*');
-    if (selectedCategory !== 'All') query = query.eq('category', selectedCategory.toLowerCase());
     if (!showExpired) {
       const today = new Date().toISOString().split('T')[0];
       query = query.or(`valid_till_date.is.null,valid_till_date.gte.${today}`);
     }
     const { data } = await query.order('created_at', { ascending: false });
     setAllDeals(data || []);
-  }, [selectedCategory, showExpired]);
+  }, [showExpired]);
 
   useEffect(() => { fetchDeals(); }, [fetchDeals]);
 
   /* ── FILTER (client-side) ── */
   useEffect(() => {
     let filtered = [...allDeals];
+    filtered = filtered.filter((d) => categoryMatchesFilter(d.category, selectedCategory));
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -100,7 +95,8 @@ export default function HomePage() {
           d.description?.toLowerCase().includes(q) ||
           d.city?.toLowerCase().includes(q) ||
           d.area?.toLowerCase().includes(q) ||
-          d.category?.toLowerCase().includes(q)
+          d.category?.toLowerCase().includes(q) ||
+          getCategoryLabel(d.category).toLowerCase().includes(q)
       );
     }
 
@@ -117,7 +113,7 @@ export default function HomePage() {
     }
 
     setDeals(filtered);
-  }, [allDeals, searchQuery, nearMeActive, userLat, userLng, nearMeRadius]);
+  }, [allDeals, selectedCategory, searchQuery, nearMeActive, userLat, userLng, nearMeRadius]);
 
   /* ── GEOLOCATION WITH IP FALLBACK ── */
   const activateWithCoords = (lat: number, lng: number, isIP = false) => {
@@ -328,17 +324,17 @@ export default function HomePage() {
 
         {/* CATEGORY PILLS */}
         <div className="flex gap-3 overflow-x-auto pb-3 mb-5">
-          {CATEGORIES.map((cat) => (
+          {CATEGORY_FILTERS.map((cat) => (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              key={cat.value}
+              onClick={() => setSelectedCategory(cat.value)}
               className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300
-                ${selectedCategory === cat
+                ${selectedCategory === cat.value
                   ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg scale-105'
                   : 'bg-white text-gray-700 hover:bg-purple-100 hover:scale-105 shadow'
                 }`}
             >
-              {cat}
+              {cat.label}
             </button>
           ))}
         </div>

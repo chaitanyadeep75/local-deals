@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { getCategoryLabel } from '@/app/lib/categories';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import type { User } from '@supabase/supabase-js';
 import {
-  Bookmark, Star, User, Mail, LogOut,
-  MapPin, Eye, Trash2, ChevronRight,
+  Bookmark, Star, User as UserIcon, Mail, LogOut,
+  MapPin, Trash2, ChevronRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -26,34 +28,64 @@ type SavedDeal = {
   };
 };
 
+type UserReview = {
+  id: number;
+  deal_id: number;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  deals: {
+    id: number;
+    title: string;
+    image: string | null;
+    city: string | null;
+    area: string | null;
+  } | null;
+};
+
 type Tab = 'saved' | 'reviews' | 'account';
 
 export default function UserProfilePage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [savedDeals, setSavedDeals] = useState<SavedDeal[]>([]);
+  const [reviews, setReviews] = useState<UserReview[]>([]);
   const [tab, setTab] = useState<Tab>('saved');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const init = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) { router.replace('/user/login'); return; }
-      setUser(data.user);
-      await fetchSaved(data.user.id);
-      setLoading(false);
-    };
-    init();
-  }, []);
-
-  const fetchSaved = async (userId: string) => {
+  async function fetchSaved(userId: string) {
     const { data } = await supabase
       .from('saved_deals')
       .select('id, deal_id, created_at, deals(id, title, description, image, city, area, valid_till_date, category)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    setSavedDeals((data as any) || []);
-  };
+    setSavedDeals((data || []) as SavedDeal[]);
+  }
+
+  async function fetchReviews(userId: string) {
+    const { data } = await supabase
+      .from('reviews')
+      .select('id, deal_id, rating, comment, created_at, deals(id, title, image, city, area)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    setReviews((data || []) as UserReview[]);
+  }
+
+  useEffect(() => {
+    const init = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) { router.replace('/user/login'); return; }
+      const role = data.user.user_metadata?.role;
+      if (role === 'business' || localStorage.getItem('ld_role_hint') === 'business') {
+        router.replace('/business/dashboard');
+        return;
+      }
+      setUser(data.user);
+      await Promise.all([fetchSaved(data.user.id), fetchReviews(data.user.id)]);
+      setLoading(false);
+    };
+    init();
+  }, [router]);
 
   const removeSaved = async (savedId: number) => {
     await supabase.from('saved_deals').delete().eq('id', savedId);
@@ -69,10 +101,10 @@ export default function UserProfilePage() {
     || user?.email?.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
     || 'User';
 
-  const tabs: { key: Tab; label: string; icon: any }[] = [
+  const tabs: { key: Tab; label: string; icon: (props: { size?: number }) => JSX.Element }[] = [
     { key: 'saved', label: 'Saved Deals', icon: Bookmark },
     { key: 'reviews', label: 'My Reviews', icon: Star },
-    { key: 'account', label: 'Account', icon: User },
+    { key: 'account', label: 'Account', icon: UserIcon },
   ];
 
   if (loading) {
@@ -107,6 +139,10 @@ export default function UserProfilePage() {
             <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 text-center">
               <p className="font-bold text-lg">{savedDeals.length}</p>
               <p className="text-white/80 text-xs">Saved</p>
+            </div>
+            <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 text-center">
+              <p className="font-bold text-lg">{reviews.length}</p>
+              <p className="text-white/80 text-xs">Reviews</p>
             </div>
           </div>
         </div>
@@ -167,7 +203,7 @@ export default function UserProfilePage() {
                             <p className="font-semibold text-sm truncate">{s.deals?.title}</p>
                             {s.deals?.category && (
                               <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full capitalize">
-                                {s.deals.category}
+                                {getCategoryLabel(s.deals.category)}
                               </span>
                             )}
                             <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
@@ -198,17 +234,57 @@ export default function UserProfilePage() {
             </motion.div>
           )}
 
-          {/* ── REVIEWS (placeholder) ── */}
+          {/* ── REVIEWS ── */}
           {tab === 'reviews' && (
             <motion.div key="reviews" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <div className="text-center py-20 text-gray-400">
-                <Star size={40} className="mx-auto mb-3 opacity-30" />
-                <p className="font-medium text-gray-600">No reviews yet</p>
-                <p className="text-sm mt-1">Rate deals you've visited to share with the community</p>
-                <Link href="/" className="inline-block mt-4 text-emerald-600 font-medium hover:underline text-sm">
-                  Browse deals →
-                </Link>
-              </div>
+              {reviews.length === 0 ? (
+                <div className="text-center py-20 text-gray-400">
+                  <Star size={40} className="mx-auto mb-3 opacity-30" />
+                  <p className="font-medium text-gray-600">No reviews yet</p>
+                  <p className="text-sm mt-1">Rate deals you&apos;ve visited to share with the community</p>
+                  <Link href="/" className="inline-block mt-4 text-emerald-600 font-medium hover:underline text-sm">
+                    Browse deals →
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {reviews.map((review) => (
+                    <div key={review.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex">
+                      {review.deals?.image ? (
+                        <img src={review.deals.image} alt={review.deals.title} className="w-24 h-24 object-cover shrink-0" />
+                      ) : (
+                        <div className="w-24 h-24 bg-gradient-to-br from-amber-100 to-orange-100 shrink-0" />
+                      )}
+                      <div className="flex-1 p-3 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm truncate">{review.deals?.title || 'Deal'}</p>
+                            <p className="text-xs text-amber-500 mt-0.5">
+                              {'★'.repeat(review.rating)}{'☆'.repeat(Math.max(0, 5 - review.rating))}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                              <MapPin size={10} />
+                              {[review.deals?.area, review.deals?.city].filter(Boolean).join(', ') || 'Location not set'}
+                            </p>
+                            {review.comment && (
+                              <p className="text-xs text-gray-600 mt-1 line-clamp-2">{review.comment}</p>
+                            )}
+                            <p className="text-[11px] text-gray-400 mt-1">
+                              {new Date(review.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </p>
+                          </div>
+                        </div>
+                        <Link
+                          href={`/deal/${review.deal_id}`}
+                          className="mt-2 text-xs text-emerald-600 font-medium flex items-center gap-1 hover:gap-2 transition-all"
+                        >
+                          View deal <ChevronRight size={12} />
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -222,7 +298,7 @@ export default function UserProfilePage() {
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Account Info</p>
                 </div>
                 <div className="px-5 py-4 flex items-center gap-3">
-                  <User size={16} className="text-gray-400" />
+                  <UserIcon size={16} className="text-gray-400" />
                   <div>
                     <p className="text-xs text-gray-400">Name</p>
                     <p className="font-medium text-sm text-gray-800">{displayName}</p>
@@ -247,6 +323,13 @@ export default function UserProfilePage() {
                     <p className="text-sm text-gray-700">Saved deals</p>
                   </div>
                   <span className="font-bold text-emerald-600">{savedDeals.length}</span>
+                </div>
+                <div className="px-5 py-4 border-t border-gray-50 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Star size={16} className="text-amber-500" />
+                    <p className="text-sm text-gray-700">Reviews posted</p>
+                  </div>
+                  <span className="font-bold text-amber-600">{reviews.length}</span>
                 </div>
               </div>
 

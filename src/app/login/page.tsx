@@ -18,18 +18,27 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    setLoading(false);
-
     if (error) {
+      setLoading(false);
       setError(error.message);
       return;
     }
 
+    const role = data.user?.user_metadata?.role;
+    if (role === 'user') {
+      await supabase.auth.signOut();
+      setLoading(false);
+      setError('This is a user account. Please use User Login.');
+      return;
+    }
+
+    setLoading(false);
+    localStorage.setItem('ld_role_hint', 'business');
     router.push('/business/dashboard');
   };
 
