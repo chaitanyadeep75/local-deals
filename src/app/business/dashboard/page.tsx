@@ -33,21 +33,52 @@ type LocationValue = {
 };
 
 /* ─────────────────────────────────────────
+   PARSE MAPBOX FEATURE → area + city
+   Handles Indian address context correctly
+───────────────────────────────────────── */
+function parseMapboxFeature(feature: any): { area: string; city: string } {
+  const context: any[] = feature.context || [];
+
+  // Mapbox context types for India (in order of preference):
+  // locality → neighbourhood/area (e.g. "Koramangala")
+  // place    → city (e.g. "Bengaluru")
+  // district → district (e.g. "Bangalore Urban")
+  // region   → state (e.g. "Karnataka")
+
+  const locality = context.find((c) =>
+    c.id?.startsWith('locality') || c.id?.startsWith('neighborhood')
+  )?.text || '';
+
+  const place = context.find((c) =>
+    c.id?.startsWith('place')
+  )?.text || '';
+
+  const district = context.find((c) =>
+    c.id?.startsWith('district')
+  )?.text || '';
+
+  // For POIs/addresses, feature.text is the place name itself
+  // Use locality as area, place as city; fall back to district if no place
+  const area = locality || feature.text || '';
+  const city = place || district || '';
+
+  return { area, city };
+}
+
+/* ─────────────────────────────────────────
    GEO HELPERS
 ───────────────────────────────────────── */
-async function reverseGeocode(lat: number, lng: number) {
+async function reverseGeocode(lat: number, lng: number): Promise<{ label: string; area: string; city: string }> {
   try {
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     const res = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&types=poi,address,place&limit=1`
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&types=locality,place,neighborhood,address&limit=1`
     );
     const data = await res.json();
     const feature = data.features?.[0];
     if (!feature) return { label: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, area: '', city: '' };
-    const context = feature.context || [];
-    const locality = context.find((c: any) => c.id?.startsWith('locality'))?.text || '';
-    const place = context.find((c: any) => c.id?.startsWith('place'))?.text || '';
-    return { label: feature.place_name, area: locality || feature.text || '', city: place };
+    const { area, city } = parseMapboxFeature(feature);
+    return { label: feature.place_name, area, city };
   } catch {
     return { label: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, area: '', city: '' };
   }
@@ -85,7 +116,7 @@ function LocationPicker({
     try {
       const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
       const res = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${token}&types=poi,address,place&limit=5&country=in`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${token}&types=poi,address,locality,place,neighborhood&limit=6&country=in`
       );
       const data = await res.json();
       setSuggestions(data.features || []);
@@ -103,10 +134,8 @@ function LocationPicker({
 
   const selectSuggestion = (feature: any) => {
     const [lng, lat] = feature.center;
-    const context = feature.context || [];
-    const locality = context.find((c: any) => c.id?.startsWith('locality'))?.text || '';
-    const place = context.find((c: any) => c.id?.startsWith('place'))?.text || '';
-    onChange({ lat, lng, label: feature.place_name, area: locality || feature.text || '', city: place });
+    const { area, city } = parseMapboxFeature(feature);
+    onChange({ lat, lng, label: feature.place_name, area, city });
     setQuery(feature.place_name);
     setSuggestions([]);
     setGeoStatus('idle');
@@ -158,24 +187,29 @@ function LocationPicker({
           <input
             className="w-full outline-none text-sm"
             style={{ border: 'none', padding: 0, borderRadius: 0, boxShadow: 'none' }}
-            placeholder="Search business location…"
+            placeholder="Search area, street, landmark…"
             value={query}
             onChange={handleInput}
           />
           {loading && <span className="text-xs text-gray-400 shrink-0 animate-pulse">Searching…</span>}
         </div>
+
         {suggestions.length > 0 && (
           <ul className="absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-            {suggestions.map((s) => (
-              <li key={s.id} onClick={() => selectSuggestion(s)}
-                className="px-4 py-3 text-sm hover:bg-purple-50 cursor-pointer border-b last:border-0 flex items-start gap-2">
-                <MapPin size={13} className="text-purple-400 mt-0.5 shrink-0" />
-                <div className="min-w-0">
-                  <span className="font-medium block truncate">{s.text}</span>
-                  <span className="text-gray-400 text-xs truncate block">{s.place_name}</span>
-                </div>
-              </li>
-            ))}
+            {suggestions.map((s) => {
+              const { area, city } = parseMapboxFeature(s);
+              const subtitle = [area, city].filter(Boolean).join(', ') || s.place_name;
+              return (
+                <li key={s.id} onClick={() => selectSuggestion(s)}
+                  className="px-4 py-3 text-sm hover:bg-purple-50 cursor-pointer border-b last:border-0 flex items-start gap-2">
+                  <MapPin size={13} className="text-purple-400 mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <span className="font-medium block truncate">{s.text}</span>
+                    <span className="text-gray-400 text-xs truncate block">{subtitle}</span>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
@@ -193,7 +227,7 @@ function LocationPicker({
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             <Info size={13} className="mt-0.5 shrink-0" />
-            Using approximate IP location. Refine by searching above.
+            Using approximate IP location. Please search for your exact address above.
           </motion.div>
         )}
         {geoStatus === 'denied' && (
@@ -201,25 +235,30 @@ function LocationPicker({
             className="text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2 space-y-1">
             <p className="flex items-center gap-1.5 text-red-700 font-medium"><AlertCircle size={13} /> Permission denied</p>
             <p className="text-red-600"><strong>Mac:</strong> System Settings → Privacy & Security → Location Services → enable Chrome.</p>
-            <p className="text-red-600"><strong>Chrome:</strong> 🔒 in address bar → Site settings → Location → Allow.</p>
           </motion.div>
         )}
         {geoStatus === 'error' && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
             <AlertCircle size={13} className="mt-0.5 shrink-0" />
-            Could not detect location. Please search above.
+            Could not detect location. Please search for your address above.
           </motion.div>
         )}
       </AnimatePresence>
 
       {value.lat && geoStatus !== 'denied' && (
-        <p className="text-xs text-green-600 flex items-center gap-1.5 ml-1">
+        <div className="flex items-center gap-2 ml-1">
           <span className="w-2 h-2 rounded-full bg-green-500 inline-block shrink-0" />
-          Pinned: {value.lat.toFixed(5)}, {value.lng?.toFixed(5)}
-          {value.city ? ` · ${value.city}` : ''}
-          {geoStatus === 'ip-fallback' && <span className="text-amber-500 ml-1">(approx.)</span>}
-        </p>
+          <p className="text-xs text-green-700 font-medium">
+            {value.area && value.city
+              ? `📍 ${value.area}, ${value.city}`
+              : value.area || value.city
+                ? `📍 ${value.area || value.city}`
+                : `Pinned: ${value.lat.toFixed(4)}, ${value.lng?.toFixed(4)}`
+            }
+            {geoStatus === 'ip-fallback' && <span className="text-amber-500 ml-1">(approx.)</span>}
+          </p>
+        </div>
       )}
     </div>
   );
@@ -228,15 +267,7 @@ function LocationPicker({
 /* ─────────────────────────────────────────
    EDIT LOCATION MODAL
 ───────────────────────────────────────── */
-function EditLocationModal({
-  deal,
-  onSave,
-  onClose,
-}: {
-  deal: Deal;
-  onSave: () => void;
-  onClose: () => void;
-}) {
+function EditLocationModal({ deal, onSave, onClose }: { deal: Deal; onSave: () => void; onClose: () => void }) {
   const [location, setLocation] = useState<LocationValue>({
     lat: deal.latitude, lng: deal.longitude,
     label: [deal.area, deal.city].filter(Boolean).join(', ') || '',
@@ -260,27 +291,19 @@ function EditLocationModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
-      >
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
         <div className="flex items-center gap-2 mb-1">
           <MapPin size={18} className="text-purple-600" />
           <h2 className="text-lg font-semibold">Set Location</h2>
         </div>
         <p className="text-sm text-gray-500 mb-4">
-          Adding location for: <span className="font-medium text-gray-800">{deal.title}</span>
+          For: <span className="font-medium text-gray-800">{deal.title}</span>
         </p>
-
         <LocationPicker value={location} onChange={setLocation} />
-
         <div className="flex gap-3 mt-5">
-          <button
-            onClick={handleSave}
-            disabled={saving || !location.lat}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-medium disabled:opacity-50 hover:opacity-90 transition"
-          >
+          <button onClick={handleSave} disabled={saving || !location.lat}
+            className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-medium disabled:opacity-50 hover:opacity-90 transition">
             {saving ? 'Saving…' : '✓ Save Location'}
           </button>
           <button onClick={onClose} className="flex-1 border py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition">
@@ -394,8 +417,6 @@ export default function BusinessDashboard() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-6 pb-16">
-
-      {/* HERO */}
       <div className="relative rounded-3xl overflow-hidden mb-8 mt-6 shadow-xl">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 opacity-95" />
         <div className="relative p-10 text-white">
@@ -404,7 +425,6 @@ export default function BusinessDashboard() {
         </div>
       </div>
 
-      {/* STATS */}
       <div className="grid md:grid-cols-3 gap-6 mb-6">
         {[
           { label: 'Total Deals', value: myDeals.length },
@@ -418,22 +438,17 @@ export default function BusinessDashboard() {
         ))}
       </div>
 
-      {/* MISSING LOCATION BANNER */}
       <AnimatePresence>
         {missingLocation > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-2xl px-5 py-4 mb-6"
-          >
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-2xl px-5 py-4 mb-6">
             <MapPinOff size={20} className="text-amber-600 mt-0.5 shrink-0" />
-            <div className="flex-1">
+            <div>
               <p className="text-amber-800 font-semibold text-sm">
                 {missingLocation} deal{missingLocation > 1 ? 's' : ''} missing location
               </p>
               <p className="text-amber-700 text-xs mt-0.5">
-                Click <strong>"Add Location"</strong> on the deal cards below to pin them on the map.
+                Click <strong>"+ Add Location"</strong> on the cards below to pin them on the map.
               </p>
             </div>
           </motion.div>
@@ -481,14 +496,13 @@ export default function BusinessDashboard() {
       {/* DEAL LIST */}
       <div className="space-y-6">
         {myDeals.map((deal) => {
-          const hasLocation = !!(deal.latitude && deal.longitude);
-          const locationText = [deal.area, deal.city].filter(Boolean).join(', ');
+          const hasLoc = !!(deal.latitude && deal.longitude);
+          const locText = [deal.area, deal.city].filter(Boolean).join(', ')
+            || (hasLoc ? 'Coords saved (no area name)' : '');
 
           return (
             <motion.div key={deal.id} whileHover={{ scale: 1.01 }} className="bg-white rounded-2xl shadow-lg p-6">
-              {deal.image && (
-                <img src={deal.image} alt="deal" className="w-full h-48 object-cover rounded-xl mb-4" />
-              )}
+              {deal.image && <img src={deal.image} alt="deal" className="w-full h-48 object-cover rounded-xl mb-4" />}
 
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
@@ -500,9 +514,7 @@ export default function BusinessDashboard() {
                     </span>
                   )}
                 </div>
-
-                {/* Location status badge */}
-                {hasLocation ? (
+                {hasLoc ? (
                   <span className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full shrink-0">
                     <MapPin size={11} /> Pinned
                   </span>
@@ -513,11 +525,10 @@ export default function BusinessDashboard() {
                 )}
               </div>
 
-              {/* Location text or prompt */}
               <p className="text-sm mt-2 flex items-center gap-1">
-                <MapPin size={13} className={hasLocation ? 'text-purple-400' : 'text-gray-300'} />
-                {hasLocation
-                  ? <span className="text-gray-600">{locationText || `${deal.latitude?.toFixed(4)}, ${deal.longitude?.toFixed(4)}`}</span>
+                <MapPin size={13} className={hasLoc ? 'text-purple-400' : 'text-gray-300'} />
+                {locText
+                  ? <span className="text-gray-600">{locText}</span>
                   : <span className="text-gray-400 italic">No location — won't appear on map</span>
                 }
               </p>
@@ -527,28 +538,19 @@ export default function BusinessDashboard() {
                 <span className="flex items-center gap-1"><MousePointerClick size={16} /> {deal.clicks}</span>
               </div>
 
-              {/* ACTION BUTTONS */}
               <div className="flex flex-wrap gap-3 mt-4">
-                <button onClick={() => setEditingDeal(deal)}
-                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition">
+                <button onClick={() => setEditingDeal(deal)} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
                   <Pencil size={15} /> Edit
                 </button>
-                <button onClick={() => handleDeleteDeal(deal.id)}
-                  className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700 transition">
+                <button onClick={() => handleDeleteDeal(deal.id)} className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700">
                   <Trash2 size={15} /> Delete
                 </button>
-
-                {/* ADD / EDIT LOCATION button */}
-                <button
-                  onClick={() => setEditingLocation(deal)}
+                <button onClick={() => setEditingLocation(deal)}
                   className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-medium transition ml-auto
-                    ${hasLocation
-                      ? 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200'
-                      : 'text-white bg-amber-500 hover:bg-amber-600 shadow-sm'
-                    }`}
-                >
+                    ${hasLoc ? 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200'
+                      : 'text-white bg-amber-500 hover:bg-amber-600 shadow-sm'}`}>
                   <MapPin size={14} />
-                  {hasLocation ? 'Edit Location' : '+ Add Location'}
+                  {hasLoc ? 'Edit Location' : '+ Add Location'}
                 </button>
               </div>
             </motion.div>
@@ -556,7 +558,6 @@ export default function BusinessDashboard() {
         })}
       </div>
 
-      {/* EDIT DEAL MODAL */}
       {editingDeal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
@@ -568,21 +569,15 @@ export default function BusinessDashboard() {
             <input type="file" accept="image/*" className="w-full mb-4"
               onChange={(e) => e.target.files && setEditImageFile(e.target.files[0])} />
             <div className="flex gap-3">
-              <button onClick={handleUpdateDeal}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl">Save</button>
+              <button onClick={handleUpdateDeal} className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl">Save</button>
               <button onClick={() => setEditingDeal(null)} className="flex-1 border py-3 rounded-xl">Cancel</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* EDIT LOCATION MODAL */}
       {editingLocation && (
-        <EditLocationModal
-          deal={editingLocation}
-          onSave={fetchMyDeals}
-          onClose={() => setEditingLocation(null)}
-        />
+        <EditLocationModal deal={editingLocation} onSave={fetchMyDeals} onClose={() => setEditingLocation(null)} />
       )}
     </main>
   );
