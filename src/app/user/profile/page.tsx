@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { ComponentType } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { getCategoryLabel } from '@/app/lib/categories';
 import { useRouter } from 'next/navigation';
@@ -28,6 +29,13 @@ type SavedDeal = {
   };
 };
 
+type SavedDealRow = {
+  id: number;
+  deal_id: number;
+  created_at: string;
+  deals: SavedDeal['deals'] | SavedDeal['deals'][] | null;
+};
+
 type UserReview = {
   id: number;
   deal_id: number;
@@ -41,6 +49,15 @@ type UserReview = {
     city: string | null;
     area: string | null;
   } | null;
+};
+
+type UserReviewRow = {
+  id: number;
+  deal_id: number;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  deals: UserReview['deals'] | UserReview['deals'][] | null;
 };
 
 type Tab = 'saved' | 'reviews' | 'account';
@@ -59,7 +76,19 @@ export default function UserProfilePage() {
       .select('id, deal_id, created_at, deals(id, title, description, image, city, area, valid_till_date, category)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    setSavedDeals((data || []) as SavedDeal[]);
+    const rows = ((data || []) as SavedDealRow[])
+      .map((row) => {
+        const related = Array.isArray(row.deals) ? row.deals[0] : row.deals;
+        if (!related) return null;
+        return {
+          id: row.id,
+          deal_id: row.deal_id,
+          created_at: row.created_at,
+          deals: related,
+        } satisfies SavedDeal;
+      })
+      .filter((row): row is SavedDeal => row !== null);
+    setSavedDeals(rows);
   }
 
   async function fetchReviews(userId: string) {
@@ -68,7 +97,18 @@ export default function UserProfilePage() {
       .select('id, deal_id, rating, comment, created_at, deals(id, title, image, city, area)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    setReviews((data || []) as UserReview[]);
+    const rows = ((data || []) as UserReviewRow[]).map((row) => {
+      const related = Array.isArray(row.deals) ? row.deals[0] : row.deals;
+      return {
+        id: row.id,
+        deal_id: row.deal_id,
+        rating: row.rating,
+        comment: row.comment,
+        created_at: row.created_at,
+        deals: related || null,
+      } satisfies UserReview;
+    });
+    setReviews(rows);
   }
 
   useEffect(() => {
@@ -101,7 +141,7 @@ export default function UserProfilePage() {
     || user?.email?.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
     || 'User';
 
-  const tabs: { key: Tab; label: string; icon: (props: { size?: number }) => JSX.Element }[] = [
+  const tabs: { key: Tab; label: string; icon: ComponentType<{ size?: number }> }[] = [
     { key: 'saved', label: 'Saved Deals', icon: Bookmark },
     { key: 'reviews', label: 'My Reviews', icon: Star },
     { key: 'account', label: 'Account', icon: UserIcon },
