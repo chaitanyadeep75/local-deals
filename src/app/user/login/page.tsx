@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function UserLoginPage() {
+function UserLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -126,5 +126,13 @@ export default function UserLoginPage() {
         </div>
       </motion.div>
     </main>
+  );
+}
+
+export default function UserLoginPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50" />}>
+      <UserLoginContent />
+    </Suspense>
   );
 }
