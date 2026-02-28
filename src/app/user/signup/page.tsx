@@ -3,12 +3,10 @@
 import { useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Mail, Lock, User, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function UserSignupPage() {
-  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -64,7 +62,7 @@ export default function UserSignupPage() {
               className="text-center py-6"
             >
               <div className="text-5xl mb-4">🎉</div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">You're in!</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">You&apos;re in!</h2>
               <p className="text-gray-500 text-sm mb-6">
                 Check your email to verify your account, then log in.
               </p>

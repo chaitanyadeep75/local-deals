@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '@/app/lib/supabase';
-import { MapPin, Navigation, Star } from 'lucide-react';
+import { MapPin, Navigation, Star, ShieldCheck, Clock3, Copy, Phone, MessageCircleMore, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatOfferLine, getUrgencyLabel } from '@/app/lib/deal-utils';
 
 type Deal = {
   id: number;
@@ -18,9 +20,21 @@ type Deal = {
   views: number;
   clicks: number;
   image: string | null;
+  image_urls?: string[] | null;
   rating: number | null;
   rating_count: number | null;
   category: string | null;
+  offer_price: string | null;
+  original_price: string | null;
+  discount_label: string | null;
+  coupon_code: string | null;
+  terms: string | null;
+  redemption_mode: string | null;
+  contact_phone: string | null;
+  contact_whatsapp: string | null;
+  is_verified: boolean | null;
+  updated_at: string | null;
+  status: string | null;
 };
 
 type Review = {
@@ -51,6 +65,8 @@ export default function DealDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const isAbortError = (error: unknown) => {
     if (error instanceof DOMException && error.name === 'AbortError') return true;
@@ -113,6 +129,10 @@ export default function DealDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dealId]);
 
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [deal?.id]);
+
   const syncDealRating = async () => {
     if (!dealId) return;
 
@@ -134,7 +154,7 @@ export default function DealDetailPage() {
     e.preventDefault();
     if (!dealId) return;
     if (!userId) {
-      router.push('/user/login');
+      router.push(`/user/login?next=/deal/${dealId}`);
       return;
     }
 
@@ -176,9 +196,19 @@ export default function DealDetailPage() {
 
   const openDirections = async () => {
     if (!deal || !deal.latitude || !deal.longitude) return;
-    await supabase.from('deals').update({ clicks: (deal.clicks || 0) + 1 }).eq('id', deal.id);
+    void supabase
+      .from('deals')
+      .update({ clicks: (deal.clicks || 0) + 1 })
+      .eq('id', deal.id);
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${deal.latitude},${deal.longitude}`, '_blank');
     setDeal({ ...deal, clicks: (deal.clicks || 0) + 1 });
+  };
+
+  const copyCoupon = async () => {
+    if (!deal?.coupon_code) return;
+    await navigator.clipboard.writeText(deal.coupon_code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
   };
 
   if (loading) {
@@ -198,43 +228,120 @@ export default function DealDetailPage() {
     );
   }
 
+  const dealImages = [...new Set([...(deal.image_urls || []), deal.image || ''].filter(Boolean))] as string[];
+  const offerLine = formatOfferLine(deal.offer_price, deal.original_price, deal.discount_label);
+  const urgency = getUrgencyLabel(deal.valid_till_date);
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-6 py-8">
+    <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-3 py-6 md:px-6 md:py-8">
       <div className="max-w-4xl mx-auto">
         <Link href="/" className="text-sm text-purple-600 font-medium">← Back to deals</Link>
         {errorMsg && (
           <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{errorMsg}</p>
         )}
 
-        <div className="mt-4 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-          {deal.image ? (
-            <img src={deal.image} alt={deal.title} className="w-full h-72 object-cover" />
+        <div className="mt-4 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-lg">
+          {dealImages.length ? (
+            <div className="relative h-56 w-full md:h-72">
+              <Image
+                src={dealImages[activeImageIndex]}
+                alt={deal.title}
+                fill
+                sizes="(max-width: 768px) 100vw, 1024px"
+                className="object-cover"
+              />
+              {dealImages.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setActiveImageIndex((prev) => (prev - 1 + dealImages.length) % dealImages.length)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/45 p-2 text-white"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveImageIndex((prev) => (prev + 1) % dealImages.length)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/45 p-2 text-white"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                  <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-2.5 py-0.5 text-xs font-semibold text-white">
+                    {activeImageIndex + 1}/{dealImages.length}
+                  </span>
+                </>
+              )}
+            </div>
           ) : (
-            <div className="w-full h-72 bg-gray-100" />
+            <div className="h-56 w-full bg-gray-100 md:h-72" />
           )}
 
-          <div className="p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{deal.title}</h1>
+          <div className="p-4 md:p-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
+              <div className="min-w-0">
+                <h1 className="line-clamp-2 break-words text-xl font-bold leading-tight text-gray-900 md:text-2xl">{deal.title}</h1>
                 {deal.category && (
                   <span className="inline-block mt-2 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full capitalize">{deal.category}</span>
                 )}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  {deal.is_verified && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                      <ShieldCheck size={11} /> Verified business
+                    </span>
+                  )}
+                  {urgency && urgency !== 'Expired' && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                      <Clock3 size={11} /> {urgency}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="text-right">
+              <div className="text-left md:text-right">
                 <p className="text-sm text-amber-500">★ {deal.rating?.toFixed(1) || '0.0'}</p>
                 <p className="text-xs text-gray-500">{deal.rating_count || 0} reviews</p>
               </div>
             </div>
 
-            <p className="mt-4 text-gray-700">{deal.description}</p>
+            <p className="mt-4 whitespace-pre-line break-words text-sm leading-relaxed text-gray-700 md:text-base">{deal.description}</p>
+            {offerLine && <p className="mt-2 text-sm font-medium text-indigo-700">{offerLine}</p>}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {deal.coupon_code && (
+                <button onClick={copyCoupon} className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+                  <Copy size={12} /> {copied ? 'Copied' : `Copy ${deal.coupon_code}`}
+                </button>
+              )}
+              {deal.contact_whatsapp && (
+                <a href={`https://wa.me/${deal.contact_whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                  <MessageCircleMore size={12} /> WhatsApp
+                </a>
+              )}
+              {deal.contact_phone && (
+                <a href={`tel:${deal.contact_phone}`}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                  <Phone size={12} /> Call
+                </a>
+              )}
+            </div>
 
-            <div className="mt-4 text-sm text-gray-600 flex flex-wrap gap-4">
+            <div className="mt-4 flex flex-wrap gap-3 text-xs text-gray-600 md:gap-4 md:text-sm">
               <span className="inline-flex items-center gap-1"><MapPin size={14} /> {[deal.area, deal.city].filter(Boolean).join(', ') || 'Location not set'}</span>
               <span>Views: {deal.views || 0}</span>
               <span>Clicks: {deal.clicks || 0}</span>
               <span>Valid till: {deal.valid_till_date ? new Date(deal.valid_till_date).toLocaleDateString('en-IN') : 'No expiry'}</span>
             </div>
+            {deal.terms && (
+              <p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                Terms: {deal.terms}
+              </p>
+            )}
+            {deal.updated_at && (
+              <p className="mt-2 text-[11px] text-slate-400">
+                Last updated: {new Date(deal.updated_at).toLocaleString('en-IN')}
+              </p>
+            )}
 
             <button
               onClick={openDirections}
@@ -246,8 +353,8 @@ export default function DealDetailPage() {
           </div>
         </div>
 
-        <div className="mt-6 bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold mb-4">Write a review</h2>
+        <div className="mt-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-lg md:p-6">
+          <h2 className="mb-4 text-base font-semibold md:text-lg">Write a review</h2>
           <form onSubmit={submitReview}>
             <div className="flex items-center gap-1 mb-3">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -269,7 +376,7 @@ export default function DealDetailPage() {
               value={myComment}
               onChange={(e) => setMyComment(e.target.value)}
               placeholder="Share your experience (optional)"
-              className="w-full border rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full rounded-xl border p-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-purple-500"
             />
 
             <button
@@ -282,19 +389,19 @@ export default function DealDetailPage() {
           </form>
         </div>
 
-        <div className="mt-6 bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold mb-4">Recent reviews</h2>
+        <div className="mt-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-lg md:p-6">
+          <h2 className="mb-4 text-base font-semibold md:text-lg">Recent reviews</h2>
 
           {reviews.length === 0 ? (
             <p className="text-sm text-gray-500">No reviews yet.</p>
           ) : (
             <div className="space-y-4">
               {reviews.map((review) => (
-                <div key={review.id} className="border border-gray-100 rounded-xl p-4">
+                <div key={review.id} className="rounded-xl border border-gray-100 p-3 md:p-4">
                   <p className="text-amber-500 text-sm inline-flex items-center gap-1">
                     <Star size={13} fill="currentColor" /> {review.rating}/5
                   </p>
-                  {review.comment && <p className="text-sm text-gray-700 mt-1">{review.comment}</p>}
+                  {review.comment && <p className="mt-1 line-clamp-4 whitespace-pre-line break-words text-sm leading-relaxed text-gray-700">{review.comment}</p>}
                   <p className="text-xs text-gray-400 mt-2">{new Date(review.created_at).toLocaleDateString('en-IN')}</p>
                 </div>
               ))}

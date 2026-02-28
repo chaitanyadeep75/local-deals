@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function UserLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,9 +49,10 @@ export default function UserLoginPage() {
       }
     }
 
+    const next = searchParams.get('next');
     setLoading(false);
     localStorage.setItem('ld_role_hint', 'user');
-    router.push('/');
+    router.push(next || '/');
   };
 
   return (
