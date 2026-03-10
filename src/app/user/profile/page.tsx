@@ -9,9 +9,10 @@ import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import {
   Bookmark, Star, User as UserIcon, Mail, LogOut,
-  MapPin, Trash2, ChevronRight,
+  MapPin, Trash2, ChevronRight, Bell, Share2, Copy,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { generateReferralCode } from '@/app/lib/growth';
 
 type SavedDeal = {
   id: number;
@@ -69,6 +70,15 @@ export default function UserProfilePage() {
   const [reviews, setReviews] = useState<UserReview[]>([]);
   const [tab, setTab] = useState<Tab>('saved');
   const [loading, setLoading] = useState(true);
+  const [notifPrefs, setNotifPrefs] = useState({
+    push_enabled: true,
+    whatsapp_enabled: false,
+    ending_soon_enabled: true,
+    price_drop_enabled: true,
+    new_nearby_enabled: true,
+  });
+  const [referralCode, setReferralCode] = useState('');
+  const [referralCount, setReferralCount] = useState(0);
 
   async function fetchSaved(userId: string) {
     const { data } = await supabase
@@ -122,10 +132,53 @@ export default function UserProfilePage() {
       }
       setUser(data.user);
       await Promise.all([fetchSaved(data.user.id), fetchReviews(data.user.id)]);
+      const prefRes = await supabase
+        .from('notification_preferences')
+        .select('push_enabled, whatsapp_enabled, ending_soon_enabled, price_drop_enabled, new_nearby_enabled')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+      if (prefRes.data) {
+        setNotifPrefs({
+          push_enabled: prefRes.data.push_enabled ?? true,
+          whatsapp_enabled: prefRes.data.whatsapp_enabled ?? false,
+          ending_soon_enabled: prefRes.data.ending_soon_enabled ?? true,
+          price_drop_enabled: prefRes.data.price_drop_enabled ?? true,
+          new_nearby_enabled: prefRes.data.new_nearby_enabled ?? true,
+        });
+      }
+      const code = generateReferralCode(data.user.id);
+      setReferralCode(code);
+      const refRes = await supabase
+        .from('user_referrals')
+        .select('id', { count: 'exact', head: true })
+        .eq('inviter_user_id', data.user.id);
+      setReferralCount(refRes.count || 0);
       setLoading(false);
     };
     init();
   }, [router]);
+
+  const saveNotificationPrefs = async () => {
+    if (!user) return;
+    await supabase.from('notification_preferences').upsert({
+      user_id: user.id,
+      ...notifPrefs,
+      updated_at: new Date().toISOString(),
+    });
+  };
+
+  const copyReferralLink = async () => {
+    if (!user || !referralCode) return;
+    const link = `${window.location.origin}/user/signup?ref=${encodeURIComponent(referralCode)}`;
+    await navigator.clipboard.writeText(link);
+    await supabase.from('user_referrals').insert({
+      inviter_user_id: user.id,
+      referral_code: referralCode,
+      source: 'share',
+      reward_points: 0,
+      status: 'pending',
+    });
+  };
 
   const removeSaved = async (savedId: number) => {
     await supabase.from('saved_deals').delete().eq('id', savedId);
@@ -370,6 +423,49 @@ export default function UserProfilePage() {
                     <p className="text-sm text-gray-700">Reviews posted</p>
                   </div>
                   <span className="font-bold text-amber-600">{reviews.length}</span>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-50">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Notifications</p>
+                </div>
+                <div className="px-5 py-4 space-y-2 text-sm">
+                  {[
+                    { key: 'push_enabled', label: 'Push alerts' },
+                    { key: 'whatsapp_enabled', label: 'WhatsApp alerts' },
+                    { key: 'ending_soon_enabled', label: 'Ending soon deals' },
+                    { key: 'price_drop_enabled', label: 'Price drops' },
+                    { key: 'new_nearby_enabled', label: 'New nearby deals' },
+                  ].map((item) => (
+                    <label key={item.key} className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-2"><Bell size={14} className="text-gray-400" /> {item.label}</span>
+                      <input
+                        type="checkbox"
+                        checked={notifPrefs[item.key as keyof typeof notifPrefs]}
+                        onChange={(e) => setNotifPrefs((prev) => ({ ...prev, [item.key]: e.target.checked }))}
+                      />
+                    </label>
+                  ))}
+                  <button onClick={saveNotificationPrefs} className="mt-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">
+                    Save notification preferences
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-50">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Referral & Invite</p>
+                </div>
+                <div className="px-5 py-4 space-y-2">
+                  <p className="text-sm text-gray-700">Invites sent: <span className="font-semibold text-emerald-700">{referralCount}</span></p>
+                  <p className="rounded-lg bg-gray-50 px-3 py-2 font-mono text-xs text-gray-700">{referralCode}</p>
+                  <button onClick={copyReferralLink} className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                    <Share2 size={13} /> Invite friends
+                  </button>
+                  <button onClick={copyReferralLink} className="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700">
+                    <Copy size={13} /> Copy invite link
+                  </button>
                 </div>
               </div>
 

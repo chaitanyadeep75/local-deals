@@ -49,9 +49,11 @@ type Deal = {
   is_verified?: boolean | null;
   updated_at?: string | null;
   status?: string | null;
+  is_boosted?: boolean | null;
+  boost_until?: string | null;
 };
 
-type FeedMode = 'for-you' | 'top-rated' | 'ending-soon' | 'trending';
+type FeedMode = 'for-you' | 'personalized' | 'top-rated' | 'ending-soon' | 'trending';
 type ViewMode = 'list' | 'map';
 
 const RADIUS_OPTIONS = [
@@ -91,9 +93,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [feedMode, setFeedMode] = useState<FeedMode>('for-you');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [showOnboarding, setShowOnboarding] = useState(
-    () => typeof window !== 'undefined' && localStorage.getItem('ld_onboarding_done') !== '1'
-  );
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [networkIssue, setNetworkIssue] = useState<string | null>(null);
   const [recentDeals, setRecentDeals] = useState<Deal[]>([]);
 
@@ -135,6 +135,10 @@ export default function HomePage() {
     setNetworkIssue(null);
     setAllDeals(data || []);
   }, [showExpired]);
+
+  useEffect(() => {
+    setShowOnboarding(localStorage.getItem('ld_onboarding_done') !== '1');
+  }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void fetchDeals(); }, [fetchDeals]);
@@ -242,21 +246,47 @@ export default function HomePage() {
   const isFiltering = searchQuery.trim().length > 0 || nearMeActive || selectedCategory !== 'all';
 
   const displayedDeals = useMemo(() => {
+    const boostRank = (deal: Deal) => {
+      if (!deal.is_boosted || !deal.boost_until) return 0;
+      const ts = new Date(deal.boost_until).getTime();
+      return Number.isFinite(ts) && ts > Date.now() ? 1 : 0;
+    };
+
+    const boostFirst = (a: Deal, b: Deal) => boostRank(b) - boostRank(a);
     const sorted = [...deals];
+    if (feedMode === 'personalized') {
+      const rawSaved = typeof window !== 'undefined' ? window.localStorage.getItem('ld_saved_categories') : null;
+      const favoriteCats = rawSaved ? (JSON.parse(rawSaved) as string[]) : [];
+      const recentIdsRaw = typeof window !== 'undefined' ? window.localStorage.getItem('ld_recent_viewed') : null;
+      const recentIds = recentIdsRaw ? (JSON.parse(recentIdsRaw) as number[]) : [];
+      return sorted.sort((a, b) => {
+        const boostDiff = boostFirst(a, b);
+        if (boostDiff !== 0) return boostDiff;
+        const aFav = favoriteCats.includes((a.category || '').toLowerCase()) ? 1 : 0;
+        const bFav = favoriteCats.includes((b.category || '').toLowerCase()) ? 1 : 0;
+        const aRecent = recentIds.includes(a.id) ? 1 : 0;
+        const bRecent = recentIds.includes(b.id) ? 1 : 0;
+        const aScore = aFav * 30 + aRecent * 15 + (a.rating || 0) * 5 + (a.clicks || 0) * 0.6 + (a.views || 0) * 0.2;
+        const bScore = bFav * 30 + bRecent * 15 + (b.rating || 0) * 5 + (b.clicks || 0) * 0.6 + (b.views || 0) * 0.2;
+        return bScore - aScore;
+      });
+    }
     if (feedMode === 'top-rated') {
-      return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0) || (b.rating_count || 0) - (a.rating_count || 0));
+      return sorted.sort((a, b) => boostFirst(a, b) || (b.rating || 0) - (a.rating || 0) || (b.rating_count || 0) - (a.rating_count || 0));
     }
     if (feedMode === 'ending-soon') {
       return sorted.sort((a, b) => {
+        const boostDiff = boostFirst(a, b);
+        if (boostDiff !== 0) return boostDiff;
         const ad = a.valid_till_date ? new Date(a.valid_till_date).getTime() : Number.MAX_SAFE_INTEGER;
         const bd = b.valid_till_date ? new Date(b.valid_till_date).getTime() : Number.MAX_SAFE_INTEGER;
         return ad - bd;
       });
     }
     if (feedMode === 'trending') {
-      return sorted.sort((a, b) => ((b.clicks || 0) + (b.views || 0)) - ((a.clicks || 0) + (a.views || 0)));
+      return sorted.sort((a, b) => boostFirst(a, b) || ((b.clicks || 0) + (b.views || 0)) - ((a.clicks || 0) + (a.views || 0)));
     }
-    return sorted;
+    return sorted.sort(boostFirst);
   }, [deals, feedMode]);
 
   const spotlightDeal = displayedDeals[0] || null;
@@ -269,6 +299,17 @@ export default function HomePage() {
   const communityPicks = [...displayedDeals]
     .sort((a, b) => ((b.rating_count || 0) + (b.clicks || 0)) - ((a.rating_count || 0) + (a.clicks || 0)))
     .slice(0, 6);
+  const searchSuggestions = useMemo(() => {
+    const bucket = new Set<string>();
+    for (const d of allDeals) {
+      [d.title, d.area || '', d.city || '', getCategoryLabel(d.category)].forEach((v) => {
+        const s = String(v || '').trim();
+        if (s && s.length >= 3) bucket.add(s);
+      });
+      if (bucket.size >= 20) break;
+    }
+    return Array.from(bucket).slice(0, 20);
+  }, [allDeals]);
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_#e0e7ff_0%,_#f8fafc_38%,_#eef2ff_100%)] px-1 pb-16 md:px-4">
@@ -304,12 +345,16 @@ export default function HomePage() {
           <div className="flex items-center gap-3 rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-lg shadow-indigo-100/30 backdrop-blur focus-within:ring-2 focus-within:ring-indigo-400 transition">
             <Search size={20} className="text-gray-400 shrink-0" />
             <input
+              list="deal-search-suggestions"
               className="flex-1 outline-none text-sm bg-transparent placeholder-gray-400"
               style={{ border: 'none', padding: 0, boxShadow: 'none', borderRadius: 0 }}
               placeholder="Search deals, brands, areas…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            <datalist id="deal-search-suggestions">
+              {searchSuggestions.map((s) => <option key={s} value={s} />)}
+            </datalist>
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600">
                 <X size={16} />
@@ -446,6 +491,7 @@ export default function HomePage() {
         <div className="mb-2 flex gap-2 overflow-x-auto pb-3 md:pb-4">
           {[
             { key: 'for-you' as const, label: 'For You', icon: Sparkles },
+            { key: 'personalized' as const, label: 'Personalized', icon: Sparkles },
             { key: 'top-rated' as const, label: 'Top Rated', icon: Trophy },
             { key: 'ending-soon' as const, label: 'Ending Soon', icon: Clock3 },
             { key: 'trending' as const, label: 'Trending', icon: Flame },

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { User, Mail, LogOut, LayoutDashboard, Bookmark, Sparkles, MapPinned, House } from 'lucide-react';
+import { User, Mail, LogOut, LayoutDashboard, Bookmark, Sparkles, MapPinned, House, Shield } from 'lucide-react';
 import { supabase } from '@/app/lib/supabase';
 
 export default function Navbar() {
@@ -13,6 +13,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isBusiness, setIsBusiness] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,6 +36,13 @@ export default function Navbar() {
       if (data.user) {
         setUser(data.user);
         setIsBusiness(await detectIsBusiness(data.user));
+        const role = data.user.user_metadata?.role;
+        if (role === 'admin') {
+          setIsAdmin(true);
+        } else {
+          const adminRow = await supabase.from('admin_users').select('user_id').eq('user_id', data.user.id).maybeSingle();
+          setIsAdmin(!!adminRow.data);
+        }
       }
     };
     checkUser();
@@ -43,8 +51,16 @@ export default function Navbar() {
       setUser(session?.user ?? null);
       if (session?.user) {
         setIsBusiness(await detectIsBusiness(session.user));
+        const role = session.user.user_metadata?.role;
+        if (role === 'admin') {
+          setIsAdmin(true);
+        } else {
+          const adminRow = await supabase.from('admin_users').select('user_id').eq('user_id', session.user.id).maybeSingle();
+          setIsAdmin(!!adminRow.data);
+        }
       } else {
         setIsBusiness(false);
+        setIsAdmin(false);
       }
     });
     return () => listener.subscription.unsubscribe();
@@ -109,6 +125,14 @@ export default function Navbar() {
               className={`${linkBase} hidden items-center gap-1.5 md:flex ${isDash ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
               <LayoutDashboard size={15} />
               Dashboard
+            </Link>
+          )}
+
+          {user && isAdmin && (
+            <Link href="/admin"
+              className={`${linkBase} hidden items-center gap-1.5 md:flex ${pathname?.startsWith('/admin') ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+              <Shield size={15} />
+              Admin
             </Link>
           )}
 

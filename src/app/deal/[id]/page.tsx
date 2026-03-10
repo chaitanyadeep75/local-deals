@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/app/lib/supabase';
-import { MapPin, Navigation, Star, ShieldCheck, Clock3, Copy, Phone, MessageCircleMore, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Navigation, Star, ShieldCheck, Clock3, Copy, Phone, MessageCircleMore, ChevronLeft, ChevronRight, Flag, Store } from 'lucide-react';
 import { formatOfferLine, getUrgencyLabel } from '@/app/lib/deal-utils';
 
 type Deal = {
@@ -67,6 +67,8 @@ export default function DealDetailPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [claiming, setClaiming] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   const isAbortError = (error: unknown) => {
     if (error instanceof DOMException && error.name === 'AbortError') return true;
@@ -211,6 +213,41 @@ export default function DealDetailPage() {
     setTimeout(() => setCopied(false), 1200);
   };
 
+  const submitClaim = async () => {
+    if (!dealId || !deal) return;
+    if (!userId) {
+      router.push(`/user/login?next=/deal/${dealId}`);
+      return;
+    }
+    setClaiming(true);
+    const claim = await supabase.from('business_claims').insert({
+      deal_id: dealId,
+      claimant_user_id: userId,
+      business_name: deal.title,
+      phone: deal.contact_phone || null,
+      status: 'pending',
+    });
+    setClaiming(false);
+    if (claim.error) setErrorMsg(claim.error.message);
+    else setErrorMsg('Claim submitted. We will verify ownership and unlock business access.');
+  };
+
+  const reportDeal = async () => {
+    if (!dealId || !userId) {
+      router.push(`/user/login?next=/deal/${dealId || ''}`);
+      return;
+    }
+    setReporting(true);
+    const report = await supabase.from('abuse_reports').insert({
+      reporter_user_id: userId,
+      deal_id: dealId,
+      reason: 'suspicious_or_incorrect',
+    });
+    setReporting(false);
+    if (report.error) setErrorMsg(report.error.message);
+    else setErrorMsg('Report submitted. Thanks for helping keep LocalDeals safe.');
+  };
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -350,6 +387,22 @@ export default function DealDetailPage() {
             >
               <Navigation size={15} /> Get Directions
             </button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={submitClaim}
+                disabled={claiming}
+                className="inline-flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 disabled:opacity-60"
+              >
+                <Store size={13} /> {claiming ? 'Submitting...' : 'Claim this business'}
+              </button>
+              <button
+                onClick={reportDeal}
+                disabled={reporting}
+                className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 disabled:opacity-60"
+              >
+                <Flag size={13} /> {reporting ? 'Reporting...' : 'Report deal'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -398,9 +451,27 @@ export default function DealDetailPage() {
             <div className="space-y-4">
               {reviews.map((review) => (
                 <div key={review.id} className="rounded-xl border border-gray-100 p-3 md:p-4">
-                  <p className="text-amber-500 text-sm inline-flex items-center gap-1">
-                    <Star size={13} fill="currentColor" /> {review.rating}/5
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-amber-500 text-sm inline-flex items-center gap-1">
+                      <Star size={13} fill="currentColor" /> {review.rating}/5
+                    </p>
+                    <button
+                      onClick={async () => {
+                        if (!userId) {
+                          router.push(`/user/login?next=/deal/${dealId || ''}`);
+                          return;
+                        }
+                        await supabase.from('abuse_reports').insert({
+                          reporter_user_id: userId,
+                          review_id: review.id,
+                          reason: 'review_abuse_or_spam',
+                        });
+                      }}
+                      className="inline-flex items-center gap-1 text-xs text-rose-600"
+                    >
+                      <Flag size={12} /> Report
+                    </button>
+                  </div>
                   {review.comment && <p className="mt-1 line-clamp-4 whitespace-pre-line break-words text-sm leading-relaxed text-gray-700">{review.comment}</p>}
                   <p className="text-xs text-gray-400 mt-2">{new Date(review.created_at).toLocaleDateString('en-IN')}</p>
                 </div>

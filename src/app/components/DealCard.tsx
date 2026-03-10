@@ -26,6 +26,7 @@ type Deal = {
   offer_price?: string | null;
   original_price?: string | null;
   discount_label?: string | null;
+  category?: string | null;
   coupon_code?: string | null;
   redemption_mode?: string | null;
   contact_phone?: string | null;
@@ -159,6 +160,12 @@ export default function DealCard({ deal }: { deal: Deal }) {
         if (!error && data) {
           setSaved(true);
           setSavedId(data.id);
+          if (typeof window !== 'undefined' && deal.category) {
+            const raw = window.localStorage.getItem('ld_saved_categories');
+            const prev = raw ? (JSON.parse(raw) as string[]) : [];
+            const next = Array.from(new Set([deal.category.toLowerCase(), ...prev])).slice(0, 12);
+            window.localStorage.setItem('ld_saved_categories', JSON.stringify(next));
+          }
           void trackEvent('deal_saved', { deal_id: deal.id });
         }
       }

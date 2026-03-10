@@ -12,6 +12,7 @@ import {
   LogOut,
   Bookmark,
   MapPinned,
+  Shield,
 } from 'lucide-react';
 import { supabase } from '@/app/lib/supabase';
 import { trackEvent } from '@/app/lib/analytics';
@@ -21,6 +22,7 @@ export default function MobileBottomNav() {
   const router = useRouter();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isBusiness, setIsBusiness] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -28,11 +30,17 @@ export default function MobileBottomNav() {
       if (!data.user) return;
       setUser(data.user);
       setIsBusiness(data.user.user_metadata?.role === 'business');
+      if (data.user.user_metadata?.role === 'admin') setIsAdmin(true);
+      else {
+        const adminRow = await supabase.from('admin_users').select('user_id').eq('user_id', data.user.id).maybeSingle();
+        setIsAdmin(!!adminRow.data);
+      }
     };
     init();
     const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null);
       setIsBusiness(session?.user?.user_metadata?.role === 'business');
+      setIsAdmin(session?.user?.user_metadata?.role === 'admin');
     });
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -62,6 +70,7 @@ export default function MobileBottomNav() {
       <div className="mx-auto grid max-w-lg grid-cols-4 items-end gap-1 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2">
         {navItem('/', 'Home', Home)}
         {navItem('/map', 'Map', MapPinned)}
+        {user && isAdmin && navItem('/admin', 'Admin', Shield)}
         {user && isBusiness && navItem('/business/dashboard', 'Dash', LayoutDashboard)}
         {user && !isBusiness && navItem('/user/profile', 'Saved', Bookmark)}
         {!user && navItem('/user/login', 'Login', UserCircle2)}

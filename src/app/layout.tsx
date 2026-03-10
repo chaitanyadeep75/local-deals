@@ -4,6 +4,7 @@ import './globals.css';
 import Navbar from './components/Navbar';
 import MobileBottomNav from './components/MobileBottomNav';
 import ServiceWorkerRegistrar from './components/Serviceworkerregistrar';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 
 const geistSans = Geist({
@@ -57,6 +58,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased pb-20`}
       ><ServiceWorkerRegistrar />
+        <PWAInstallPrompt />
         <Navbar />
         <main className="app-container">{children}</main>
         <MobileBottomNav />

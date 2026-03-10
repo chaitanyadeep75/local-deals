@@ -17,7 +17,7 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -32,6 +32,14 @@ export default function SignupPage() {
     if (error) {
       setError(error.message);
       return;
+    }
+
+    if (data.user?.id) {
+      await supabase.from('business_permissions').upsert({
+        user_id: data.user.id,
+        status: 'pending',
+        reason: null,
+      });
     }
 
     setSuccess(true);
@@ -58,6 +66,8 @@ export default function SignupPage() {
             Account created!  
             <br />
             Please verify your email before logging in.
+            <br />
+            Business posting access will be enabled after admin approval.
           </div>
         ) : (
           <form onSubmit={handleSignup} className="space-y-5">

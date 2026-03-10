@@ -58,6 +58,7 @@ const MAP_STYLE_KEY = 'ld_map_style';
 const VERIFIED_ONLY_KEY = 'ld_map_verified_only';
 
 export default function MapPage() {
+  const mapToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   const mapRef = useRef<MapRef | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [selected, setSelected] = useState<Deal | null>(null);
@@ -265,19 +266,20 @@ export default function MapPage() {
 
   return (
     <main className="relative h-[calc(100vh-64px)]">
-      <MapView
-        ref={mapRef}
-        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-        initialViewState={{
-          latitude: 12.9716,
-          longitude: 77.5946,
-          zoom: 11,
-        }}
-        style={{ width: '100%', height: '100%' }}
-        mapStyle={mapStyleUrl}
-        onLoad={updateBoundsFromMap}
-        onMoveEnd={updateBoundsFromMap}
-      >
+      {mapToken ? (
+        <MapView
+          ref={mapRef}
+          mapboxAccessToken={mapToken}
+          initialViewState={{
+            latitude: 12.9716,
+            longitude: 77.5946,
+            zoom: 11,
+          }}
+          style={{ width: '100%', height: '100%' }}
+          mapStyle={mapStyleUrl}
+          onLoad={updateBoundsFromMap}
+          onMoveEnd={updateBoundsFromMap}
+        >
         {pinItems.map((item) => (
           <Marker
             key={item.id}
@@ -391,7 +393,17 @@ export default function MapPage() {
             </div>
           </Popup>
         )}
-      </MapView>
+        </MapView>
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-slate-100 px-4 text-center">
+          <div className="max-w-md rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <p className="font-semibold">Map is not configured in this environment.</p>
+            <p className="mt-1">
+              Add <code>NEXT_PUBLIC_MAPBOX_TOKEN</code> in Vercel Project Settings and redeploy.
+            </p>
+          </div>
+        </div>
+      )}
 
       <section className="pointer-events-none absolute left-3 top-3 z-20 w-[calc(100%-24px)] max-w-md rounded-2xl border border-white/50 bg-white/90 p-3 shadow-xl backdrop-blur md:left-4 md:top-4 md:p-4">
         <div className="pointer-events-auto">

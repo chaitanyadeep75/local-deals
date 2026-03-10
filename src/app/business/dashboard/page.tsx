@@ -1,14 +1,25 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { CATEGORY_OPTIONS, getCategoryLabel } from '@/app/lib/categories';
 import { useRouter } from 'next/navigation';
 import { computeDealHealth } from '@/app/lib/deal-utils';
+import { computeDealQuality } from '@/app/lib/growth';
+import {
+  BOOST_PLANS_CONFIG_KEY,
+  DEFAULT_CURRENCY,
+  FREE_POSTING_ENABLED,
+  getBoostPlanFromList,
+  getDefaultBoostPlans,
+  parseBoostPlans,
+  type BoostPlan,
+} from '@/app/lib/monetization';
 import {
   Plus, Trash2, Pencil, Eye, MousePointerClick,
   MapPin, LocateFixed, AlertCircle, Info, MapPinOff,
   Store, Phone, Globe, Instagram, BadgePercent, Ticket, FileText,
+  BarChart3, Navigation, BookmarkCheck, Share2, MessageSquare,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -37,6 +48,10 @@ type Deal = {
   status?: string | null;
   is_verified?: boolean | null;
   updated_at?: string | null;
+  quality_score?: number | null;
+  quality_flags?: string[] | null;
+  is_boosted?: boolean | null;
+  boost_until?: string | null;
 };
 
 type LocationValue = {
@@ -58,6 +73,25 @@ type MapboxFeature = {
   text?: string;
   place_name?: string;
   context?: MapboxContextItem[];
+};
+
+type AnalyticsSummary = {
+  opens: number;
+  directions: number;
+  saves: number;
+  shares: number;
+  reviews: number;
+};
+
+type DealAnalytics = {
+  dealId: number;
+  title: string;
+  opens: number;
+  directions: number;
+  saves: number;
+  shares: number;
+  reviews: number;
+  score: number;
 };
 
 /* ─────────────────────────────────────────
@@ -369,6 +403,13 @@ const uploadDealImages = async (files: File[]) => {
   return uploads.filter((u): u is string => !!u);
 };
 
+function extractDealIdFromPayload(raw: unknown): number | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const payload = raw as { deal_id?: unknown };
+  const id = Number(payload.deal_id);
+  return Number.isFinite(id) ? id : null;
+}
+
 const insertDealWithFallback = async (payload: Record<string, unknown>) => {
   let current = { ...payload };
   for (let i = 0; i < 12; i += 1) {
@@ -435,6 +476,8 @@ export default function BusinessDashboard() {
   const [originalPrice, setOriginalPrice] = useState('');
   const [discountLabel, setDiscountLabel] = useState('');
   const [couponCode, setCouponCode] = useState('');
+  const [dealContactPhone, setDealContactPhone] = useState('');
+  const [dealContactWhatsapp, setDealContactWhatsapp] = useState('');
   const [redemption, setRedemption] = useState('in-store');
   const [terms, setTerms] = useState('');
   const [validTillDate, setValidTillDate] = useState('');
@@ -447,6 +490,26 @@ export default function BusinessDashboard() {
   const [editingLocation, setEditingLocation] = useState<Deal | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [canPost, setCanPost] = useState(true);
+  const [approvalStatus, setApprovalStatus] = useState<string>('approved');
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummary>({
+    opens: 0,
+    directions: 0,
+    saves: 0,
+    shares: 0,
+    reviews: 0,
+  });
+  const [topAnalyticsDeals, setTopAnalyticsDeals] = useState<DealAnalytics[]>([]);
+  const [boostPlans, setBoostPlans] = useState<BoostPlan[]>(getDefaultBoostPlans());
+  const [boostingKey, setBoostingKey] = useState<string | null>(null);
+  const [boostMessage, setBoostMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [nowTs] = useState(() => Date.now());
+  const currencyFormatter = useMemo(
+    () => new Intl.NumberFormat('en-IN', { style: 'currency', currency: DEFAULT_CURRENCY, maximumFractionDigits: 0 }),
+    []
+  );
 
   const totalViews = myDeals.reduce((a, b) => a + b.views, 0);
   const totalClicks = myDeals.reduce((a, b) => a + b.clicks, 0);
@@ -471,6 +534,22 @@ export default function BusinessDashboard() {
       setShopWebsite(profile.website || '');
       setShopInstagram(profile.instagram || '');
       setShopAbout(profile.about || '');
+
+      const perm = await supabase
+        .from('business_permissions')
+        .select('status')
+        .eq('user_id', data.session.user.id)
+        .maybeSingle();
+      const status = perm.data?.status || 'approved';
+      setApprovalStatus(status);
+      setCanPost(status === 'approved');
+
+      const pricing = await supabase
+        .from('admin_config')
+        .select('value')
+        .eq('key', BOOST_PLANS_CONFIG_KEY)
+        .maybeSingle();
+      setBoostPlans(parseBoostPlans(pricing.data?.value));
     };
     init();
   }, [router]);
@@ -510,11 +589,113 @@ export default function BusinessDashboard() {
     if (!error) setMyDeals((data || []) as Deal[]);
   };
 
+  const fetchOwnerAnalytics = async (dealsSnapshot: Deal[]) => {
+    if (!dealsSnapshot.length) {
+      setAnalyticsSummary({ opens: 0, directions: 0, saves: 0, shares: 0, reviews: 0 });
+      setTopAnalyticsDeals([]);
+      return;
+    }
+
+    setAnalyticsLoading(true);
+    setAnalyticsError(null);
+
+    const dealIdSet = new Set(dealsSnapshot.map((d) => d.id));
+    const eventNames = ['deal_card_opened', 'directions_clicked', 'deal_saved', 'deal_shared', 'review_submitted'];
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const primary = await supabase
+      .from('analytics_events')
+      .select('event_name, event_payload, created_at')
+      .gte('created_at', since)
+      .in('event_name', eventNames)
+      .order('created_at', { ascending: false })
+      .limit(4000);
+
+    const fallback = primary.error
+      ? await supabase
+          .from('event_logs')
+          .select('event_name, payload, created_at')
+          .gte('created_at', since)
+          .in('event_name', eventNames)
+          .order('created_at', { ascending: false })
+          .limit(4000)
+      : null;
+
+    const rows = (primary.error ? fallback?.data : primary.data) as Array<{
+      event_name: string;
+      event_payload?: unknown;
+      payload?: unknown;
+      created_at?: string;
+    }> | null;
+
+    if (!rows) {
+      setAnalyticsError('Could not load analytics right now.');
+      setAnalyticsLoading(false);
+      return;
+    }
+
+    const summary: AnalyticsSummary = { opens: 0, directions: 0, saves: 0, shares: 0, reviews: 0 };
+    const perDeal = new Map<number, DealAnalytics>();
+    const titleById = new Map(dealsSnapshot.map((d) => [d.id, d.title]));
+
+    for (const row of rows) {
+      const payload = row.event_payload ?? row.payload;
+      const dealId = extractDealIdFromPayload(payload);
+      if (!dealId || !dealIdSet.has(dealId)) continue;
+
+      const current = perDeal.get(dealId) || {
+        dealId,
+        title: titleById.get(dealId) || `Deal #${dealId}`,
+        opens: 0,
+        directions: 0,
+        saves: 0,
+        shares: 0,
+        reviews: 0,
+        score: 0,
+      };
+
+      if (row.event_name === 'deal_card_opened') {
+        summary.opens += 1;
+        current.opens += 1;
+      } else if (row.event_name === 'directions_clicked') {
+        summary.directions += 1;
+        current.directions += 1;
+      } else if (row.event_name === 'deal_saved') {
+        summary.saves += 1;
+        current.saves += 1;
+      } else if (row.event_name === 'deal_shared') {
+        summary.shares += 1;
+        current.shares += 1;
+      } else if (row.event_name === 'review_submitted') {
+        summary.reviews += 1;
+        current.reviews += 1;
+      }
+
+      current.score = current.opens + current.directions * 2 + current.saves * 2 + current.shares + current.reviews * 2;
+      perDeal.set(dealId, current);
+    }
+
+    const topDeals = Array.from(perDeal.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6);
+
+    setAnalyticsSummary(summary);
+    setTopAnalyticsDeals(topDeals);
+    setAnalyticsLoading(false);
+  };
+
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void fetchMyDeals(); }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void fetchOwnerAnalytics(myDeals); }, [myDeals]);
+
   const handleAddDeal = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canPost) {
+      setLocationError('Your business account is pending admin approval. Posting is disabled until approved.');
+      return;
+    }
     let finalLocation = location;
     if ((finalLocation.lat === null || finalLocation.lng === null) && finalLocation.label.trim()) {
       const resolved = await forwardGeocode(finalLocation.label.trim());
@@ -532,6 +713,29 @@ export default function BusinessDashboard() {
 
     const uploadedUrls = await uploadDealImages(imageFiles);
     const imageUrl = uploadedUrls[0] || null;
+    const quality = computeDealQuality({
+      title,
+      description,
+      valid_till_date: validTillDate || null,
+      category,
+      image: imageUrl,
+      image_urls: uploadedUrls,
+      latitude: finalLocation.lat,
+      longitude: finalLocation.lng,
+      offer_price: offerPrice,
+      original_price: originalPrice,
+      discount_label: discountLabel,
+      terms,
+      contact_phone: dealContactPhone || shopPhone,
+    });
+    const hardFlags = ['missing_image', 'missing_expiry', 'missing_offer', 'missing_location'];
+    const blocking = quality.flags.filter((f) => hardFlags.includes(f));
+    if (blocking.length) {
+      setLocationError('Please add image, expiry date, offer details, and a valid location before publishing.');
+      setSubmitting(false);
+      return;
+    }
+
     const basePayload = {
       title,
       description: description.trim(),
@@ -549,9 +753,11 @@ export default function BusinessDashboard() {
       coupon_code: couponCode || null,
       terms: terms || null,
       redemption_mode: redemption || null,
-      contact_phone: shopPhone || null,
-      contact_whatsapp: shopWhatsapp || null,
+      contact_phone: dealContactPhone || shopPhone || null,
+      contact_whatsapp: dealContactWhatsapp || shopWhatsapp || null,
       status: 'active',
+      quality_score: quality.score,
+      quality_flags: quality.flags,
     };
 
     const insertResult = await insertDealWithFallback({
@@ -595,6 +801,7 @@ export default function BusinessDashboard() {
 
     setTitle(''); setDescription(''); setValidTillDate(''); setCategory('');
     setOfferPrice(''); setOriginalPrice(''); setDiscountLabel('');
+    setDealContactPhone(''); setDealContactWhatsapp('');
     setCouponCode(''); setRedemption('in-store'); setTerms('');
     setImageFiles([]);
     setLocation({ lat: null, lng: null, label: '', area: '', city: '' });
@@ -610,6 +817,21 @@ export default function BusinessDashboard() {
     const newUploads = await uploadDealImages(editImageFiles);
     const mergedImages = [...existingImages, ...newUploads].slice(0, 8);
     const updatedImage = mergedImages[0] || null;
+    const quality = computeDealQuality({
+      title: editingDeal.title,
+      description: editingDeal.description,
+      valid_till_date: editingDeal.valid_till_date,
+      category: editingDeal.category,
+      image: updatedImage,
+      image_urls: mergedImages,
+      latitude: editingDeal.latitude,
+      longitude: editingDeal.longitude,
+      offer_price: editingDeal.offer_price,
+      original_price: editingDeal.original_price,
+      discount_label: editingDeal.discount_label,
+      terms: editingDeal.terms,
+      contact_phone: editingDeal.contact_phone,
+    });
     const baseUpdate = {
       title: editingDeal.title,
       description: editingDeal.description,
@@ -621,8 +843,12 @@ export default function BusinessDashboard() {
       discount_label: editingDeal.discount_label || null,
       coupon_code: editingDeal.coupon_code || null,
       terms: editingDeal.terms || null,
+      contact_phone: editingDeal.contact_phone || null,
+      contact_whatsapp: editingDeal.contact_whatsapp || null,
       redemption_mode: editingDeal.redemption_mode || null,
       status: editingDeal.status || 'active',
+      quality_score: quality.score,
+      quality_flags: quality.flags,
     };
     await updateDealWithFallback(editingDeal.id, {
       ...baseUpdate,
@@ -687,6 +913,58 @@ export default function BusinessDashboard() {
     fetchMyDeals();
   };
 
+  const boostDeal = async (deal: Deal, days: number) => {
+    setBoostMessage(null);
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) {
+      setBoostMessage({ type: 'error', text: 'Please login again and retry boosting.' });
+      return;
+    }
+    const plan = getBoostPlanFromList(boostPlans, days);
+    if (!plan) {
+      setBoostMessage({ type: 'error', text: 'Boost plan not found. Refresh and try again.' });
+      return;
+    }
+    const key = `${deal.id}-${days}`;
+    setBoostingKey(key);
+    const now = new Date();
+    const ends = new Date(now.getTime() + plan.days * 24 * 60 * 60 * 1000);
+    const insertRes = await supabase.from('deal_boosts').insert({
+      deal_id: deal.id,
+      user_id: auth.user.id,
+      days: plan.days,
+      amount: plan.price,
+      status: 'active',
+      starts_at: now.toISOString(),
+      ends_at: ends.toISOString(),
+    });
+    if (insertRes.error) {
+      const msg = insertRes.error.message.includes('deal_boosts')
+        ? 'Boost table is missing. Run latest SQL migration for deal_boosts and retry.'
+        : insertRes.error.message;
+      setBoostMessage({ type: 'error', text: msg });
+      setBoostingKey(null);
+      return;
+    }
+
+    const updateRes = await updateDealWithFallback(deal.id, {
+      is_boosted: true,
+      boost_until: ends.toISOString(),
+    });
+    if (updateRes.error) {
+      setBoostMessage({ type: 'error', text: updateRes.error.message || 'Boost saved, but deal badge update failed.' });
+      setBoostingKey(null);
+      return;
+    }
+
+    setBoostMessage({
+      type: 'success',
+      text: `${deal.title} boosted for ${plan.days} days (till ${ends.toLocaleDateString('en-IN')}).`,
+    });
+    setBoostingKey(null);
+    fetchMyDeals();
+  };
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_#e0e7ff_0%,_#f8fafc_38%,_#eef2ff_100%)] px-1 pb-16 md:px-4">
       <div className="pointer-events-none absolute -top-24 -left-20 h-72 w-72 rounded-full bg-fuchsia-300/20 blur-3xl" />
@@ -713,6 +991,70 @@ export default function BusinessDashboard() {
           </motion.div>
         ))}
       </div>
+
+      <section className="mb-6 rounded-2xl border border-white/80 bg-white/90 p-4 shadow-xl shadow-indigo-100/30 backdrop-blur md:mb-8 md:p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900 md:text-xl">
+            <BarChart3 size={18} />
+            Owner Analytics
+          </h2>
+          <p className="text-xs text-slate-500">Last 30 days</p>
+        </div>
+
+        {analyticsError && (
+          <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">{analyticsError}</p>
+        )}
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs text-slate-500">Deal opens</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">{analyticsSummary.opens}</p>
+          </div>
+          <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+            <p className="inline-flex items-center gap-1 text-xs text-indigo-700"><Navigation size={12} /> Directions</p>
+            <p className="mt-1 text-2xl font-semibold text-indigo-900">{analyticsSummary.directions}</p>
+          </div>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+            <p className="inline-flex items-center gap-1 text-xs text-emerald-700"><BookmarkCheck size={12} /> Saves</p>
+            <p className="mt-1 text-2xl font-semibold text-emerald-900">{analyticsSummary.saves}</p>
+          </div>
+          <div className="rounded-xl border border-violet-200 bg-violet-50 p-3">
+            <p className="inline-flex items-center gap-1 text-xs text-violet-700"><Share2 size={12} /> Shares</p>
+            <p className="mt-1 text-2xl font-semibold text-violet-900">{analyticsSummary.shares}</p>
+          </div>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+            <p className="inline-flex items-center gap-1 text-xs text-amber-700"><MessageSquare size={12} /> Reviews</p>
+            <p className="mt-1 text-2xl font-semibold text-amber-900">{analyticsSummary.reviews}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto_auto_auto] gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            <span>Top deal</span>
+            <span>Opens</span>
+            <span>Dir</span>
+            <span>Saves</span>
+            <span>Shares</span>
+            <span>Reviews</span>
+          </div>
+          {analyticsLoading ? (
+            <p className="px-3 py-3 text-sm text-slate-500">Loading analytics...</p>
+          ) : topAnalyticsDeals.length ? (
+            topAnalyticsDeals.map((item) => (
+              <div key={`analytics-${item.dealId}`} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto_auto_auto] gap-2 border-b border-slate-100 px-3 py-2 text-sm last:border-0">
+                <span className="truncate text-slate-800">{item.title}</span>
+                <span className="text-slate-600">{item.opens}</span>
+                <span className="text-slate-600">{item.directions}</span>
+                <span className="text-slate-600">{item.saves}</span>
+                <span className="text-slate-600">{item.shares}</span>
+                <span className="text-slate-600">{item.reviews}</span>
+              </div>
+            ))
+          ) : (
+            <p className="px-3 py-3 text-sm text-slate-500">No analytics events yet. Interactions will appear here automatically.</p>
+          )}
+        </div>
+      </section>
 
       {setupDone < 3 && (
         <div className="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3">
@@ -778,8 +1120,30 @@ export default function BusinessDashboard() {
         </div>
       </form>
 
+      {!canPost && (
+        <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Posting access is <strong>{approvalStatus}</strong>. Admin approval is required before you can publish deals.
+        </div>
+      )}
+      {FREE_POSTING_ENABLED && (
+        <div className="mb-6 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Posting deals is free. You only pay when you choose to boost a deal.
+        </div>
+      )}
+      {boostMessage && (
+        <div
+          className={`mb-6 rounded-2xl px-4 py-3 text-sm ${
+            boostMessage.type === 'success'
+              ? 'border border-emerald-300 bg-emerald-50 text-emerald-800'
+              : 'border border-rose-300 bg-rose-50 text-rose-700'
+          }`}
+        >
+          {boostMessage.text}
+        </div>
+      )}
+
       {/* ADD DEAL FORM */}
-      <form onSubmit={handleAddDeal} className="mb-8 rounded-2xl border border-white/80 bg-white/90 p-4 shadow-xl shadow-indigo-100/30 backdrop-blur md:mb-10 md:p-8">
+      <form onSubmit={handleAddDeal} className={`mb-8 rounded-2xl border border-white/80 bg-white/90 p-4 shadow-xl shadow-indigo-100/30 backdrop-blur md:mb-10 md:p-8 ${!canPost ? 'opacity-70' : ''}`}>
         <h2 className="text-xl font-semibold mb-6 flex gap-2 items-center">
           <Plus size={18} /> Add New Deal
         </h2>
@@ -804,6 +1168,14 @@ export default function BusinessDashboard() {
             placeholder="Offer Price (e.g. ₹499)" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} />
           <input className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
             placeholder="Original Price (e.g. ₹999)" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} />
+          <input className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+            placeholder={`Deal contact phone (default: ${shopPhone || 'business phone'})`}
+            value={dealContactPhone}
+            onChange={(e) => setDealContactPhone(e.target.value)} />
+          <input className="w-full p-4 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+            placeholder={`Deal WhatsApp (default: ${shopWhatsapp || 'business WhatsApp'})`}
+            value={dealContactWhatsapp}
+            onChange={(e) => setDealContactWhatsapp(e.target.value)} />
         </div>
 
         <select className="w-full p-4 border rounded-xl mb-4 focus:ring-2 focus:ring-purple-500 outline-none"
@@ -856,9 +1228,9 @@ export default function BusinessDashboard() {
           Add up to 8 images. First image is used as cover.
         </p>
 
-        <button disabled={submitting}
+        <button disabled={submitting || !canPost}
           className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-xl font-semibold hover:opacity-90 transition disabled:opacity-60">
-          {submitting ? 'Adding deal…' : 'Add Deal'}
+          {!canPost ? 'Awaiting admin approval' : submitting ? 'Adding deal…' : 'Add Deal'}
         </button>
       </form>
 
@@ -892,15 +1264,22 @@ export default function BusinessDashboard() {
                     </span>
                   )}
                 </div>
-                {hasLoc ? (
-                  <span className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full shrink-0">
-                    <MapPin size={11} /> Pinned
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full shrink-0">
-                    <MapPinOff size={11} /> No location
-                  </span>
-                )}
+                <div className="flex flex-col items-end gap-1">
+                  {hasLoc ? (
+                    <span className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full shrink-0">
+                      <MapPin size={11} /> Pinned
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full shrink-0">
+                      <MapPinOff size={11} /> No location
+                    </span>
+                  )}
+                  {deal.is_boosted && deal.boost_until && new Date(deal.boost_until).getTime() > nowTs && (
+                    <span className="rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-700">
+                      Boosted till {new Date(deal.boost_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <p className="mt-2 flex items-center gap-1 text-xs md:text-sm">
@@ -953,6 +1332,18 @@ export default function BusinessDashboard() {
                 <button onClick={() => extendDeal(deal)} className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-800">
                   +7 days
                 </button>
+                {boostPlans.map((plan) => (
+                  <button
+                    key={plan.days}
+                    onClick={() => boostDeal(deal, plan.days)}
+                    disabled={boostingKey === `${deal.id}-${plan.days}`}
+                    className="flex items-center gap-1 rounded-lg border border-fuchsia-200 bg-fuchsia-50 px-3 py-1.5 text-sm font-medium text-fuchsia-700 hover:bg-fuchsia-100"
+                  >
+                    {boostingKey === `${deal.id}-${plan.days}`
+                      ? 'Boosting...'
+                      : `${plan.label} ${currencyFormatter.format(plan.price)}`}
+                  </button>
+                ))}
               </div>
             </motion.div>
           );
@@ -1023,6 +1414,21 @@ export default function BusinessDashboard() {
               value={editingDeal.valid_till_date || ''}
               onChange={(e) => setEditingDeal({ ...editingDeal, valid_till_date: e.target.value || null })}
             />
+
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <input
+                className="w-full p-3 border rounded-xl text-sm"
+                placeholder="Contact phone"
+                value={editingDeal.contact_phone || ''}
+                onChange={(e) => setEditingDeal({ ...editingDeal, contact_phone: e.target.value })}
+              />
+              <input
+                className="w-full p-3 border rounded-xl text-sm"
+                placeholder="Contact WhatsApp"
+                value={editingDeal.contact_whatsapp || ''}
+                onChange={(e) => setEditingDeal({ ...editingDeal, contact_whatsapp: e.target.value })}
+              />
+            </div>
 
             <textarea
               className="w-full p-3 border rounded-xl mb-3 text-sm"
