@@ -96,13 +96,13 @@ export default function DealDetailPage() {
 
       if (dealError) throw dealError;
       if (reviewError) throw reviewError;
-      if (authError) throw authError;
       if (signal?.aborted) return;
 
       setDeal((dealData as Deal | null) || null);
       setReviews((reviewData as Review[] | null) || []);
 
-      const uid = authData.user?.id || null;
+      // authError is non-critical — unauthenticated users get AuthSessionMissingError
+      const uid = authError ? null : (authData.user?.id || null);
       setUserId(uid);
 
       if (uid && reviewData) {

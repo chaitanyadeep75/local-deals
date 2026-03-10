@@ -23,6 +23,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const DEAL_TAGS = [
+  'Veg-Friendly', 'Family', 'Couples', 'Students',
+  'First Visit Only', 'Weekend Only', 'Limited Slots',
+  'Free Delivery', '18+ Only', 'By Appointment',
+];
+
 type Deal = {
   id: number;
   title: string;
@@ -52,6 +58,11 @@ type Deal = {
   quality_flags?: string[] | null;
   is_boosted?: boolean | null;
   boost_until?: string | null;
+  max_redemptions?: number | null;
+  min_purchase?: string | null;
+  valid_hours?: string | null;
+  deal_tags?: string[] | null;
+  age_restricted?: boolean | null;
 };
 
 type LocationValue = {
@@ -484,14 +495,17 @@ export default function BusinessDashboard() {
   const [category, setCategory] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [location, setLocation] = useState<LocationValue>({ lat: null, lng: null, label: '', area: '', city: '' });
+  const [dealTags, setDealTags] = useState<string[]>([]);
+  const [maxRedemptions, setMaxRedemptions] = useState('');
+  const [minPurchase, setMinPurchase] = useState('');
+  const [validHours, setValidHours] = useState('');
+  const [ageRestricted, setAgeRestricted] = useState(false);
   const [myDeals, setMyDeals] = useState<Deal[]>([]);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [editImageFiles, setEditImageFiles] = useState<File[]>([]);
   const [editingLocation, setEditingLocation] = useState<Deal | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [canPost, setCanPost] = useState(true);
-  const [approvalStatus, setApprovalStatus] = useState<string>('approved');
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummary>({
@@ -535,15 +549,6 @@ export default function BusinessDashboard() {
       setShopInstagram(profile.instagram || '');
       setShopAbout(profile.about || '');
 
-      const perm = await supabase
-        .from('business_permissions')
-        .select('status')
-        .eq('user_id', data.session.user.id)
-        .maybeSingle();
-      const status = perm.data?.status || 'approved';
-      setApprovalStatus(status);
-      setCanPost(status === 'approved');
-
       const pricing = await supabase
         .from('admin_config')
         .select('value')
@@ -554,7 +559,7 @@ export default function BusinessDashboard() {
     init();
   }, [router]);
 
-  const saveBusinessProfile = async (e: React.FormEvent) => {
+  const saveBusinessProfile = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setProfileSaving(true);
     setProfileMsg(null);
@@ -690,12 +695,8 @@ export default function BusinessDashboard() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void fetchOwnerAnalytics(myDeals); }, [myDeals]);
 
-  const handleAddDeal = async (e: React.FormEvent) => {
+  const handleAddDeal = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    if (!canPost) {
-      setLocationError('Your business account is pending admin approval. Posting is disabled until approved.');
-      return;
-    }
     let finalLocation = location;
     if ((finalLocation.lat === null || finalLocation.lng === null) && finalLocation.label.trim()) {
       const resolved = await forwardGeocode(finalLocation.label.trim());
@@ -758,6 +759,11 @@ export default function BusinessDashboard() {
       status: 'active',
       quality_score: quality.score,
       quality_flags: quality.flags,
+      max_redemptions: maxRedemptions ? parseInt(maxRedemptions, 10) : null,
+      min_purchase: minPurchase.trim() || null,
+      valid_hours: validHours.trim() || null,
+      deal_tags: dealTags.length ? dealTags : null,
+      age_restricted: ageRestricted || null,
     };
 
     const insertResult = await insertDealWithFallback({
@@ -805,6 +811,8 @@ export default function BusinessDashboard() {
     setCouponCode(''); setRedemption('in-store'); setTerms('');
     setImageFiles([]);
     setLocation({ lat: null, lng: null, label: '', area: '', city: '' });
+    setDealTags([]); setMaxRedemptions(''); setMinPurchase('');
+    setValidHours(''); setAgeRestricted(false);
     setSubmitting(false);
     fetchMyDeals();
   };
@@ -1120,11 +1128,6 @@ export default function BusinessDashboard() {
         </div>
       </form>
 
-      {!canPost && (
-        <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Posting access is <strong>{approvalStatus}</strong>. Admin approval is required before you can publish deals.
-        </div>
-      )}
       {FREE_POSTING_ENABLED && (
         <div className="mb-6 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           Posting deals is free. You only pay when you choose to boost a deal.
@@ -1143,7 +1146,7 @@ export default function BusinessDashboard() {
       )}
 
       {/* ADD DEAL FORM */}
-      <form onSubmit={handleAddDeal} className={`mb-8 rounded-2xl border border-white/80 bg-white/90 p-4 shadow-xl shadow-indigo-100/30 backdrop-blur md:mb-10 md:p-8 ${!canPost ? 'opacity-70' : ''}`}>
+      <form onSubmit={handleAddDeal} className="mb-8 rounded-2xl border border-white/80 bg-white/90 p-4 shadow-xl shadow-indigo-100/30 backdrop-blur md:mb-10 md:p-8">
         <h2 className="text-xl font-semibold mb-6 flex gap-2 items-center">
           <Plus size={18} /> Add New Deal
         </h2>
@@ -1206,6 +1209,78 @@ export default function BusinessDashboard() {
           />
         </div>
 
+        {/* ── Extra Deal Details ── */}
+        <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+          <p className="text-sm font-semibold text-slate-700">Deal Extras</p>
+
+          <div className="grid md:grid-cols-3 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">Max Redemptions</label>
+              <input
+                type="number"
+                min={1}
+                className="w-full rounded-xl border p-3 text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="e.g. 50"
+                value={maxRedemptions}
+                onChange={(e) => setMaxRedemptions(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">Min Purchase</label>
+              <input
+                className="w-full rounded-xl border p-3 text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="e.g. ₹500"
+                value={minPurchase}
+                onChange={(e) => setMinPurchase(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">Valid Hours</label>
+              <input
+                className="w-full rounded-xl border p-3 text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="e.g. Mon–Fri 10am–6pm"
+                value={validHours}
+                onChange={(e) => setValidHours(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-medium text-slate-600">Deal Tags</label>
+            <div className="flex flex-wrap gap-2">
+              {DEAL_TAGS.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() =>
+                    setDealTags((prev) =>
+                      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                    )
+                  }
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-all
+                    ${dealTags.includes(tag)
+                      ? 'border-purple-500 bg-purple-100 text-purple-700'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-purple-300'}`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="flex cursor-pointer items-center gap-3">
+            <div
+              onClick={() => setAgeRestricted((v) => !v)}
+              className={`relative h-6 w-11 rounded-full transition-colors ${ageRestricted ? 'bg-red-500' : 'bg-slate-200'}`}
+            >
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${ageRestricted ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </div>
+            <span className="text-sm font-medium text-slate-700">
+              18+ only{ageRestricted && <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-600">Age restricted</span>}
+            </span>
+          </label>
+        </div>
+
         <div className="mb-4">
           <label className="text-sm font-medium text-gray-700 mb-2 block">📍 Business Location</label>
           <LocationPicker value={location} onChange={(v) => {
@@ -1228,9 +1303,9 @@ export default function BusinessDashboard() {
           Add up to 8 images. First image is used as cover.
         </p>
 
-        <button disabled={submitting || !canPost}
+        <button disabled={submitting}
           className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-xl font-semibold hover:opacity-90 transition disabled:opacity-60">
-          {!canPost ? 'Awaiting admin approval' : submitting ? 'Adding deal…' : 'Add Deal'}
+          {submitting ? 'Adding deal…' : 'Add Deal'}
         </button>
       </form>
 
