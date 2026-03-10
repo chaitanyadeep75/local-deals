@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "LocalDeals",
+    "slug": "localdeals",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "localdeals",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4f46e5"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.localdeals.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#4f46e5",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "package": "com.localdeals.app"
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "extra": {
+      "supabaseUrl": "https://wfnbdnmbliqjaxscfchw.supabase.co",
+      "supabaseAnonKey": "sb_publishable_stUic5UWOoEmnTqjZhfUiw_nNQY07aR",
+      "router": {}
+    }
+  }
+}
