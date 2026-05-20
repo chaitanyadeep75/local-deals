@@ -67,7 +67,7 @@ export default function MobileBottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.07] bg-slate-950/96 backdrop-blur-3xl md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.07] bg-slate-950/96 backdrop-blur-3xl lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="mx-auto flex max-w-lg items-center justify-around px-1 pt-1.5 pb-2">
