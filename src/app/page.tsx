@@ -107,6 +107,7 @@ export default function HomePage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [networkIssue, setNetworkIssue] = useState<string | null>(null);
   const [recentDeals, setRecentDeals] = useState<Deal[]>([]);
+  const [isBusiness, setIsBusiness] = useState(false);
 
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
@@ -142,6 +143,14 @@ export default function HomePage() {
 
   useEffect(() => {
     setShowOnboarding(localStorage.getItem('ld_onboarding_done') !== '1');
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      const role = data.user.user_metadata?.role;
+      if (role === 'business') setIsBusiness(true);
+    });
   }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -274,6 +283,11 @@ export default function HomePage() {
   const communityPicks = [...displayedDeals]
     .sort((a, b) => ((b.rating_count || 0) + (b.clicks || 0)) - ((a.rating_count || 0) + (a.clicks || 0)))
     .slice(0, 6);
+  const dealsEndingToday = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return allDeals.filter((d) => d.valid_till_date === today).length;
+  }, [allDeals]);
+
   const searchSuggestions = useMemo(() => {
     const bucket = new Set<string>();
     for (const d of allDeals) {
@@ -361,6 +375,35 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Business CTA Banner */}
+        {!isBusiness && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mb-4"
+          >
+            <div className="relative overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-r from-amber-950/60 via-slate-900/80 to-violet-950/60">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-violet-500/8" />
+              <div className="relative flex items-center gap-4 p-4 md:p-5">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-xl shadow-[0_0_20px_rgba(245,158,11,0.4)]">
+                  🏪
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white md:text-base">Own a local business?</p>
+                  <p className="mt-0.5 text-xs text-slate-400">Post deals for free · reach thousands nearby · no commission.</p>
+                </div>
+                <Link
+                  href="/login"
+                  className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-xs font-bold text-white shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all duration-200 hover:opacity-90 hover:shadow-[0_0_28px_rgba(245,158,11,0.5)]"
+                >
+                  List Free →
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Network error */}
         {networkIssue && (
           <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-400">
@@ -372,16 +415,35 @@ export default function HomePage() {
 
         {/* Onboarding */}
         {showOnboarding && (
-          <div className="mb-4 overflow-hidden rounded-2xl border border-violet-500/20 bg-violet-500/5">
-            <div className="border-b border-violet-500/10 px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-widest text-violet-400">Quick Start</p>
-              <p className="mt-0.5 text-sm font-semibold text-white">Get started in 3 steps</p>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-950/50 via-slate-900/80 to-fuchsia-950/30"
+          >
+            <div className="flex items-center justify-between border-b border-violet-500/10 px-4 py-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-violet-400">Welcome to LocalDeals</p>
+                <p className="mt-0.5 text-sm font-semibold text-white">Find the best deals around you</p>
+              </div>
+              <button
+                onClick={() => { localStorage.setItem('ld_onboarding_done', '1'); setShowOnboarding(false); }}
+                className="rounded-lg bg-white/5 p-1.5 text-slate-500 transition hover:text-slate-300"
+              >
+                <X size={14} />
+              </button>
             </div>
-            <div className="grid gap-0 divide-y divide-white/5 text-xs text-slate-400 md:grid-cols-3 md:divide-x md:divide-y-0">
-              {['Enable Near Me to find local deals', 'Select categories you love', 'Save a deal to personalize your feed'].map((step, i) => (
-                <div key={i} className="flex items-center gap-2.5 px-4 py-3">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-[10px] font-bold text-violet-400">{i + 1}</span>
-                  {step}
+            <div className="grid divide-y divide-white/5 md:grid-cols-3 md:divide-x md:divide-y-0">
+              {[
+                { icon: '📍', label: 'Find Nearby', desc: 'Enable Near Me to discover deals within your radius' },
+                { icon: '🏷️', label: 'Browse Categories', desc: 'Filter by food, salons, gyms, and 20+ categories' },
+                { icon: '❤️', label: 'Save & Personalise', desc: 'Save deals to get a personalised feed just for you' },
+              ].map((step, i) => (
+                <div key={i} className="flex items-start gap-3 px-4 py-4">
+                  <span className="mt-0.5 text-2xl leading-none">{step.icon}</span>
+                  <div>
+                    <p className="text-xs font-bold text-white">{step.label}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{step.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -390,10 +452,10 @@ export default function HomePage() {
                 onClick={() => { localStorage.setItem('ld_onboarding_done', '1'); setShowOnboarding(false); }}
                 className="text-xs font-semibold text-violet-400 transition hover:text-violet-300"
               >
-                Got it, let's go →
+                Got it, let&apos;s explore →
               </button>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* ── Sticky filter bar ── */}
@@ -529,6 +591,25 @@ export default function HomePage() {
             ))}
           </div>
         </div>
+
+        {/* Ending today urgency strip */}
+        {dealsEndingToday > 0 && !isFiltering && (
+          <motion.button
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => setFeedMode('ending-soon')}
+            className="mb-5 flex w-full items-center gap-3 overflow-hidden rounded-xl border border-rose-500/25 bg-gradient-to-r from-rose-950/60 to-amber-950/40 px-4 py-3 text-left transition-all duration-200 hover:border-rose-500/40 hover:bg-rose-500/5"
+          >
+            <span className="animate-pulse text-xl leading-none">🔥</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-sm font-semibold text-white">
+                <span className="text-rose-400">{dealsEndingToday} deal{dealsEndingToday !== 1 ? 's' : ''}</span> ending today
+              </span>
+              <span className="ml-2 text-xs text-slate-500">Don&apos;t miss out</span>
+            </div>
+            <span className="shrink-0 text-xs font-bold text-rose-400">View all →</span>
+          </motion.button>
+        )}
 
         {/* ── Spotlight ── */}
         {spotlightDeal && !isFiltering && (
