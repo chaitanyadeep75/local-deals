@@ -314,12 +314,12 @@ export default function HomePage() {
           <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-fuchsia-300/20 blur-3xl" />
 
-          <div className="relative px-4 py-5 text-white md:px-10 md:py-10">
+          <div className="relative px-4 py-5 text-white lg:px-10 lg:py-10">
             <div className="mb-2.5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-sm">
               <Sparkles size={11} className="text-yellow-300" />
               Live deals · updated daily
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-white md:text-4xl lg:text-5xl">
+            <h1 className="text-2xl font-black tracking-tight text-white lg:text-4xl xl:text-5xl">
               Every Deal Near You.
               <br />
               <span className="text-yellow-300">Every Kind of Shop.</span>
@@ -328,14 +328,14 @@ export default function HomePage() {
               Food, salons, mechanics, coaching, resorts, gyms, grocery &amp; more — local offers from every business around you.
             </p>
             {/* Shop type chips — hidden on mobile to save space */}
-            <div className="mt-3 hidden flex-wrap gap-2 md:flex">
+            <div className="mt-3 hidden flex-wrap gap-2 lg:flex">
               {['🍽️ Restaurants', '🔧 Mechanic', '📚 Education', '🏨 Resorts', '💇 Salons', '🛒 Grocery', '🏋️ Gyms', '💊 Pharmacy'].map((s) => (
                 <span key={s} className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">{s}</span>
               ))}
             </div>
 
             {/* Stats bar — hidden on mobile */}
-            <div className="mt-3 hidden flex-wrap gap-2 md:flex md:mt-5 md:gap-3">
+            <div className="mt-3 hidden flex-wrap gap-2 lg:flex lg:mt-5 lg:gap-3">
               {[
                 { label: 'Live Deals', value: allDeals.length, color: 'bg-white/15' },
                 { label: 'Showing', value: deals.length, color: 'bg-white/15' },
@@ -432,7 +432,7 @@ export default function HomePage() {
                 <X size={14} />
               </button>
             </div>
-            <div className="grid divide-y divide-white/5 md:grid-cols-3 md:divide-x md:divide-y-0">
+            <div className="grid divide-y divide-white/5 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
               {[
                 { icon: '📍', label: 'Find Nearby', desc: 'Enable Near Me to discover deals within your radius' },
                 { icon: '🏷️', label: 'Browse Categories', desc: 'Filter by food, salons, gyms, and 20+ categories' },
@@ -459,7 +459,7 @@ export default function HomePage() {
         )}
 
         {/* ── Sticky filter bar ── */}
-        <div className="sticky top-[60px] z-20 mb-4 rounded-2xl border border-white/8 bg-slate-900/85 p-3 backdrop-blur-2xl">
+        <div className="sticky top-0 z-20 mb-4 rounded-2xl border border-white/8 bg-slate-900/85 p-3 backdrop-blur-2xl lg:top-[60px]">
 
           {/* Controls row */}
           <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -613,7 +613,7 @@ export default function HomePage() {
 
         {/* ── Spotlight — desktop only, saves mobile scroll ── */}
         {spotlightDeal && !isFiltering && (
-          <Link href={`/deal/${spotlightDeal.id}`} className="mb-5 hidden md:block">
+          <Link href={`/deal/${spotlightDeal.id}`} className="mb-5 hidden lg:block">
             <div className="group relative overflow-hidden rounded-2xl border border-violet-500/20 bg-slate-900/80 p-4 transition-all duration-300 hover:border-violet-500/40 hover:shadow-card-hover md:p-5">
               <div className="absolute inset-0 bg-gradient-to-r from-violet-600/5 via-transparent to-fuchsia-600/5" />
               <div className="relative flex items-center justify-between gap-4">
@@ -697,7 +697,7 @@ export default function HomePage() {
             </p>
           </motion.div>
         ) : (
-          <motion.div layout className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-3">
+          <motion.div layout className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
             <AnimatePresence>
               {displayedDeals.map((deal) => (
                 <motion.div
@@ -722,7 +722,7 @@ export default function HomePage() {
               <div className="h-4 w-1 rounded-full bg-gradient-to-b from-violet-500 to-fuchsia-500" />
               <h2 className="text-sm font-bold text-white md:text-base">Recently Viewed</h2>
             </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
               {recentDeals.map((deal) => <DealCard key={`recent-${deal.id}`} deal={deal} />)}
             </div>
           </section>
@@ -734,7 +734,7 @@ export default function HomePage() {
               <div className="h-4 w-1 rounded-full bg-gradient-to-b from-emerald-400 to-teal-500" />
               <h2 className="text-sm font-bold text-white md:text-base">Community Picks</h2>
             </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
               {communityPicks.map((deal) => <DealCard key={`pick-${deal.id}`} deal={deal} />)}
             </div>
           </section>
@@ -746,7 +746,7 @@ export default function HomePage() {
               <div className="h-4 w-1 rounded-full bg-gradient-to-b from-rose-500 to-amber-500" />
               <h2 className="text-sm font-bold text-white md:text-base">Ending Soon</h2>
             </div>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {endingSoonDeals.map((deal) => {
                 const meta = getCategoryMeta(deal.category);
                 return (
