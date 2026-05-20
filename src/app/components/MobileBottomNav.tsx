@@ -55,19 +55,24 @@ export default function MobileBottomNav() {
       <Link
         href={href}
         onClick={() => { void trackEvent('mobile_nav_click', { href, label }); }}
-        className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-2 py-1 text-[11px] font-medium transition ${
-          active ? 'bg-indigo-50 text-indigo-700' : 'text-slate-400'
+        className={`relative flex min-w-0 flex-col items-center gap-1 rounded-2xl px-3 py-2 text-[11px] font-medium transition-all duration-200 ${
+          active
+            ? 'text-violet-400'
+            : 'text-slate-500 hover:text-slate-300'
         }`}
       >
+        {active && (
+          <span className="absolute inset-0 rounded-2xl bg-violet-500/15 border border-violet-500/20" />
+        )}
         <Icon size={20} />
-        {label}
+        <span className="relative">{label}</span>
       </Link>
     );
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/80 bg-white/95 backdrop-blur md:hidden">
-      <div className="mx-auto grid max-w-lg grid-cols-4 items-end gap-1 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/8 bg-slate-950/90 backdrop-blur-2xl md:hidden">
+      <div className="mx-auto grid max-w-lg grid-cols-4 items-center gap-1 px-2 pb-[max(10px,env(safe-area-inset-bottom))] pt-2">
         {navItem('/', 'Home', Home)}
         {navItem('/map', 'Map', MapPinned)}
         {user && isAdmin && navItem('/admin', 'Admin', Shield)}
@@ -87,7 +92,7 @@ export default function MobileBottomNav() {
             void trackEvent('mobile_logout', { source: 'mobile_bottom_nav' });
             router.push('/');
           }}
-          className="flex flex-col items-center gap-1 rounded-xl px-2 py-1 text-[11px] font-medium text-slate-400 transition"
+          className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-[11px] font-medium text-slate-500 transition-all duration-200 hover:text-rose-400"
           aria-label="Logout or signup"
         >
           <LogOut size={20} />

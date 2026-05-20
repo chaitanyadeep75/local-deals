@@ -16,7 +16,7 @@ export default function MapFilters({
       <select
         value={distance}
         onChange={(e) => setDistance(Number(e.target.value))}
-        className="border rounded px-2 py-1 text-sm"
+        className="border rounded px-2 py-1 text-sm bg-white text-gray-900"
       >
         <option value={1}>1 km</option>
         <option value={3}>3 km</option>

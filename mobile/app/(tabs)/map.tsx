@@ -141,8 +141,8 @@ export default function MapScreen() {
                 coordinate={{ latitude: deal.latitude, longitude: deal.longitude }}
                 pinColor={deal.is_verified ? '#10b981' : '#6366f1'}
               >
-                <Callout tooltip onPress={() => router.push(`/deal/${deal.id}`)}>
-                  <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, width: 210, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }}>
+                <Callout tooltip>
+                  <TouchableOpacity onPress={() => router.push(`/deal/${deal.id}`)} style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, width: 210, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 }}>
                     <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }} numberOfLines={2}>{deal.title}</Text>
                     {deal.is_verified && <Text style={{ fontSize: 10, color: '#059669', marginTop: 2 }}>✓ Verified</Text>}
                     <Text style={{ fontSize: 11, color: '#64748b', marginTop: 3 }} numberOfLines={1}>
@@ -159,7 +159,7 @@ export default function MapScreen() {
                     <View style={{ marginTop: 8, backgroundColor: '#4f46e5', borderRadius: 8, paddingVertical: 6, alignItems: 'center' }}>
                       <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>View Deal →</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 </Callout>
               </Marker>
             ))}

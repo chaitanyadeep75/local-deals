@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import DealCard from '@/app/components/DealCard';
-import { CATEGORY_FILTERS, categoryMatchesFilter, getCategoryLabel } from '@/app/lib/categories';
+import { CATEGORY_FILTERS, categoryMatchesFilter, getCategoryLabel, getCategoryMeta } from '@/app/lib/categories';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -19,6 +19,9 @@ import {
   MapPinned,
   List,
   WifiOff,
+  TrendingUp,
+  Tag,
+  ChevronRight,
 } from 'lucide-react';
 import { getUrgencyLabel } from '@/app/lib/deal-utils';
 import Link from 'next/link';
@@ -86,6 +89,14 @@ async function getLocationByIP(): Promise<{ lat: number; lng: number } | null> {
 
 type GeoStatus = 'idle' | 'loading' | 'active' | 'ip-fallback' | 'denied' | 'error';
 
+const FEED_MODES: { key: FeedMode; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
+  { key: 'for-you', label: 'For You', icon: Sparkles },
+  { key: 'personalized', label: 'Personalized', icon: TrendingUp },
+  { key: 'top-rated', label: 'Top Rated', icon: Trophy },
+  { key: 'ending-soon', label: 'Ending Soon', icon: Clock3 },
+  { key: 'trending', label: 'Trending', icon: Flame },
+];
+
 export default function HomePage() {
   const [allDeals, setAllDeals] = useState<Deal[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -106,7 +117,6 @@ export default function HomePage() {
 
   const fetchDeals = useCallback(async () => {
     const today = new Date().toISOString().split('T')[0];
-
     const runQuery = async (withStatus: boolean) => {
       let query = supabase.from('deals').select('*');
       if (withStatus) query = query.eq('status', 'active');
@@ -115,23 +125,17 @@ export default function HomePage() {
     };
 
     let { data, error } = await runQuery(true);
-
-    // Backward-compatible fallback when new migration (status column) is not applied yet.
     if (error && (error.code === '42703' || String(error.message || '').toLowerCase().includes('status'))) {
       ({ data, error } = await runQuery(false));
     }
-
     if (error) {
       const msg = String(error.message || '').toLowerCase();
-      if (msg.includes('fetch') || msg.includes('network')) {
-        setNetworkIssue('Network issue while loading deals. Please retry.');
-      } else {
-        setNetworkIssue('Could not load deals right now. Please retry.');
-      }
+      setNetworkIssue(msg.includes('fetch') || msg.includes('network')
+        ? 'Network issue while loading deals. Please retry.'
+        : 'Could not load deals right now. Please retry.');
       setAllDeals([]);
       return;
     }
-
     setNetworkIssue(null);
     setAllDeals(data || []);
   }, [showExpired]);
@@ -158,7 +162,6 @@ export default function HomePage() {
   const deals = useMemo(() => {
     let filtered = [...allDeals];
     filtered = filtered.filter((d) => categoryMatchesFilter(d.category, selectedCategory));
-
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -171,7 +174,6 @@ export default function HomePage() {
           getCategoryLabel(d.category).toLowerCase().includes(q)
       );
     }
-
     if (nearMeActive && userLat !== null && userLng !== null) {
       filtered = filtered.filter((d) => {
         if (!d.latitude || !d.longitude) return false;
@@ -183,14 +185,11 @@ export default function HomePage() {
         return da - db;
       });
     }
-
     return filtered;
   }, [allDeals, selectedCategory, searchQuery, nearMeActive, userLat, userLng, nearMeRadius]);
 
   const activateWithCoords = (lat: number, lng: number, isIP = false) => {
-    setUserLat(lat);
-    setUserLng(lng);
-    setNearMeActive(true);
+    setUserLat(lat); setUserLng(lng); setNearMeActive(true);
     setGeoStatus(isIP ? 'ip-fallback' : 'active');
   };
 
@@ -201,25 +200,14 @@ export default function HomePage() {
   };
 
   const handleNearMe = () => {
-    if (nearMeActive) {
-      setNearMeActive(false);
-      setGeoStatus('idle');
-      return;
-    }
-
+    if (nearMeActive) { setNearMeActive(false); setGeoStatus('idle'); return; }
     if (userLat && userLng) {
       setNearMeActive(true);
       setGeoStatus(geoStatus === 'ip-fallback' ? 'ip-fallback' : 'active');
       return;
     }
-
     setGeoStatus('loading');
-
-    if (!navigator.geolocation) {
-      tryIPFallback();
-      return;
-    }
-
+    if (!navigator.geolocation) { tryIPFallback(); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => activateWithCoords(pos.coords.latitude, pos.coords.longitude),
       async (err) => {
@@ -227,20 +215,15 @@ export default function HomePage() {
           setGeoStatus('denied');
           const ipLoc = await getLocationByIP();
           if (ipLoc) activateWithCoords(ipLoc.lat, ipLoc.lng, true);
-        } else {
-          await tryIPFallback();
-        }
+        } else { await tryIPFallback(); }
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
     );
   };
 
   const clearAll = () => {
-    setSelectedCategory('all');
-    setSearchQuery('');
-    setNearMeActive(false);
-    setGeoStatus('idle');
-    setFeedMode('for-you');
+    setSelectedCategory('all'); setSearchQuery('');
+    setNearMeActive(false); setGeoStatus('idle'); setFeedMode('for-you');
   };
 
   const isFiltering = searchQuery.trim().length > 0 || nearMeActive || selectedCategory !== 'all';
@@ -251,7 +234,6 @@ export default function HomePage() {
       const ts = new Date(deal.boost_until).getTime();
       return Number.isFinite(ts) && ts > Date.now() ? 1 : 0;
     };
-
     const boostFirst = (a: Deal, b: Deal) => boostRank(b) - boostRank(a);
     const sorted = [...deals];
     if (feedMode === 'personalized') {
@@ -271,9 +253,7 @@ export default function HomePage() {
         return bScore - aScore;
       });
     }
-    if (feedMode === 'top-rated') {
-      return sorted.sort((a, b) => boostFirst(a, b) || (b.rating || 0) - (a.rating || 0) || (b.rating_count || 0) - (a.rating_count || 0));
-    }
+    if (feedMode === 'top-rated') return sorted.sort((a, b) => boostFirst(a, b) || (b.rating || 0) - (a.rating || 0) || (b.rating_count || 0) - (a.rating_count || 0));
     if (feedMode === 'ending-soon') {
       return sorted.sort((a, b) => {
         const boostDiff = boostFirst(a, b);
@@ -283,18 +263,13 @@ export default function HomePage() {
         return ad - bd;
       });
     }
-    if (feedMode === 'trending') {
-      return sorted.sort((a, b) => boostFirst(a, b) || ((b.clicks || 0) + (b.views || 0)) - ((a.clicks || 0) + (a.views || 0)));
-    }
+    if (feedMode === 'trending') return sorted.sort((a, b) => boostFirst(a, b) || ((b.clicks || 0) + (b.views || 0)) - ((a.clicks || 0) + (a.views || 0)));
     return sorted.sort(boostFirst);
   }, [deals, feedMode]);
 
   const spotlightDeal = displayedDeals[0] || null;
   const endingSoonDeals = displayedDeals
-    .filter((d) => {
-      const label = getUrgencyLabel(d.valid_till_date);
-      return label && label !== 'Expired';
-    })
+    .filter((d) => { const l = getUrgencyLabel(d.valid_till_date); return l && l !== 'Expired'; })
     .slice(0, 4);
   const communityPicks = [...displayedDeals]
     .sort((a, b) => ((b.rating_count || 0) + (b.clicks || 0)) - ((a.rating_count || 0) + (a.clicks || 0)))
@@ -312,42 +287,65 @@ export default function HomePage() {
   }, [allDeals]);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_#e0e7ff_0%,_#f8fafc_38%,_#eef2ff_100%)] px-1 pb-16 md:px-4">
-      <div className="pointer-events-none absolute -top-24 -left-20 h-72 w-72 rounded-full bg-fuchsia-300/20 blur-3xl" />
-      <div className="pointer-events-none absolute top-12 right-0 h-80 w-80 rounded-full bg-indigo-300/20 blur-3xl" />
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-        <div className="relative mb-4 mt-3 overflow-hidden rounded-[1.6rem] border border-indigo-200/70 shadow-[0_18px_45px_-20px_rgba(79,70,229,0.45)] md:mb-6 md:mt-5 md:rounded-[2rem]">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-fuchsia-600 opacity-95" />
-          <div className="relative p-5 text-white md:p-9">
-            <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs">
-              <Sparkles size={12} /> Daily local picks for you
+    <main className="relative min-h-screen pb-16">
+
+      {/* ── Hero ── */}
+      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}>
+        <div className="relative mb-6 mt-2 overflow-hidden rounded-2xl border border-white/10 md:mb-8 md:mt-4">
+          {/* Gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-fuchsia-600 to-indigo-700" />
+          {/* Noise/texture overlay */}
+          <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.75\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.15\'/%3E%3C/svg%3E")', backgroundSize: '200px' }} />
+          {/* Glowing orbs inside hero */}
+          <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-fuchsia-300/20 blur-3xl" />
+
+          <div className="relative px-5 py-7 text-white md:px-10 md:py-10">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-sm">
+              <Sparkles size={11} className="text-yellow-300" />
+              Live deals · updated daily
+            </div>
+            <h1 className="text-2xl font-black tracking-tight text-white md:text-4xl lg:text-5xl">
+              Every Deal Near You.
+              <br />
+              <span className="text-yellow-300">Every Kind of Shop.</span>
+            </h1>
+            <p className="mt-2.5 max-w-lg text-sm text-white/80 md:text-base">
+              Food, salons, mechanics, coaching, resorts, gyms, grocery &amp; more — discover local offers from every type of business around you.
             </p>
-            <h1 className="text-2xl font-black tracking-tight md:text-4xl">Find Better Deals Around You</h1>
-            <p className="mt-2 max-w-2xl text-sm text-white/90 md:text-base">Browse smarter, save faster, and discover new local favorites.</p>
-            <div className="mt-4 grid max-w-md grid-cols-3 gap-2.5 md:mt-5 md:gap-3">
-              <div className="rounded-xl bg-white/15 p-3 backdrop-blur">
-                <p className="text-xs text-white/80">Live Deals</p>
-                <p className="text-lg font-bold md:text-xl">{allDeals.length}</p>
-              </div>
-              <div className="rounded-xl bg-white/15 p-3 backdrop-blur">
-                <p className="text-xs text-white/80">Filtered</p>
-                <p className="text-lg font-bold md:text-xl">{deals.length}</p>
-              </div>
-              <div className="rounded-xl bg-white/15 p-3 backdrop-blur">
-                <p className="text-xs text-white/80">Mode</p>
-                <p className="text-sm font-semibold capitalize">{feedMode.replace('-', ' ')}</p>
-              </div>
+            {/* Shop type chips */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {['🍽️ Restaurants', '🔧 Mechanic', '📚 Education', '🏨 Resorts', '💇 Salons', '🛒 Grocery', '🏋️ Gyms', '💊 Pharmacy'].map((s) => (
+                <span key={s} className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">{s}</span>
+              ))}
+            </div>
+
+            {/* Stats bar */}
+            <div className="mt-5 flex flex-wrap gap-2 md:gap-3">
+              {[
+                { label: 'Live Deals', value: allDeals.length, color: 'bg-white/15' },
+                { label: 'Showing', value: deals.length, color: 'bg-white/15' },
+                { label: feedMode.replace('-', ' '), value: null, color: 'bg-yellow-400/20 border border-yellow-400/30' },
+              ].map((stat) => (
+                <div key={stat.label} className={`rounded-xl ${stat.color} px-3.5 py-2 backdrop-blur-sm`}>
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-white/70">{stat.label}</p>
+                  <p className="mt-0.5 text-base font-extrabold text-white">
+                    {stat.value !== null ? stat.value : <span className="capitalize text-sm">{feedMode.replace('-', ' ')}</span>}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        <div className="relative mb-3 md:mb-4">
-          <div className="flex items-center gap-3 rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-lg shadow-indigo-100/30 backdrop-blur focus-within:ring-2 focus-within:ring-indigo-400 transition">
-            <Search size={20} className="text-gray-400 shrink-0" />
+        {/* ── Search ── */}
+        <div className="relative mb-4">
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-800/80 px-4 py-3.5 shadow-card backdrop-blur-xl transition-all duration-200 focus-within:border-violet-500/40 focus-within:ring-2 focus-within:ring-violet-500/20">
+            <Search size={18} className="shrink-0 text-slate-500" />
             <input
               list="deal-search-suggestions"
-              className="flex-1 outline-none text-sm bg-transparent placeholder-gray-400"
-              style={{ border: 'none', padding: 0, boxShadow: 'none', borderRadius: 0 }}
+              className="flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder-slate-600"
+              style={{ border: 'none', padding: 0, boxShadow: 'none', borderRadius: 0, background: 'transparent' }}
               placeholder="Search deals, brands, areas…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -356,227 +354,278 @@ export default function HomePage() {
               {searchSuggestions.map((s) => <option key={s} value={s} />)}
             </datalist>
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600">
-                <X size={16} />
+              <button onClick={() => setSearchQuery('')} className="rounded-lg bg-white/5 p-1 text-slate-500 transition hover:text-slate-300">
+                <X size={14} />
               </button>
             )}
           </div>
         </div>
+
+        {/* Network error */}
         {networkIssue && (
-          <div className="mb-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            <WifiOff size={13} />
+          <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-400">
+            <WifiOff size={13} className="shrink-0" />
             {networkIssue}
-            <button onClick={fetchDeals} className="ml-auto font-semibold text-amber-800 underline">Retry</button>
+            <button onClick={fetchDeals} className="ml-auto font-semibold text-amber-300 underline">Retry</button>
           </div>
         )}
+
+        {/* Onboarding */}
         {showOnboarding && (
-          <div className="mb-3 rounded-2xl border border-indigo-200 bg-white/90 p-3 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Quick start</p>
-            <p className="mt-1 text-sm font-medium text-slate-800">Use LocalDeals in 3 steps</p>
-            <div className="mt-2 grid gap-1.5 text-xs text-slate-600 md:grid-cols-3">
-              <p>1. Enable <strong>Near Me</strong></p>
-              <p>2. Select categories you like</p>
-              <p>3. Save one deal to personalize feed</p>
+          <div className="mb-4 overflow-hidden rounded-2xl border border-violet-500/20 bg-violet-500/5">
+            <div className="border-b border-violet-500/10 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-violet-400">Quick Start</p>
+              <p className="mt-0.5 text-sm font-semibold text-white">Get started in 3 steps</p>
             </div>
+            <div className="grid gap-0 divide-y divide-white/5 text-xs text-slate-400 md:grid-cols-3 md:divide-x md:divide-y-0">
+              {['Enable Near Me to find local deals', 'Select categories you love', 'Save a deal to personalize your feed'].map((step, i) => (
+                <div key={i} className="flex items-center gap-2.5 px-4 py-3">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-[10px] font-bold text-violet-400">{i + 1}</span>
+                  {step}
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-violet-500/10 px-4 py-2.5">
+              <button
+                onClick={() => { localStorage.setItem('ld_onboarding_done', '1'); setShowOnboarding(false); }}
+                className="text-xs font-semibold text-violet-400 transition hover:text-violet-300"
+              >
+                Got it, let's go →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Sticky filter bar ── */}
+        <div className="sticky top-[60px] z-20 mb-4 rounded-2xl border border-white/8 bg-slate-900/85 p-3 backdrop-blur-2xl">
+
+          {/* Controls row */}
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            {/* Near Me */}
             <button
-              onClick={() => {
-                localStorage.setItem('ld_onboarding_done', '1');
-                setShowOnboarding(false);
-              }}
-              className="mt-2 text-xs font-semibold text-indigo-600 hover:underline"
+              onClick={handleNearMe}
+              disabled={geoStatus === 'loading'}
+              className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all duration-200 md:px-4 md:py-2.5 md:text-sm ${
+                nearMeActive
+                  ? 'border-violet-500/40 bg-violet-500/20 text-violet-300 shadow-neon-violet'
+                  : 'border-white/10 bg-white/5 text-slate-400 hover:border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-400'
+              } ${geoStatus === 'loading' ? 'cursor-wait opacity-60' : ''}`}
             >
-              Got it
+              <LocateFixed size={14} className={geoStatus === 'loading' ? 'animate-spin' : ''} />
+              {geoStatus === 'loading' ? 'Locating…' : nearMeActive ? 'Near Me ✓' : 'Near Me'}
+              {geoStatus === 'ip-fallback' && nearMeActive && (
+                <span className="rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-400 border border-amber-500/20">approx</span>
+              )}
+            </button>
+
+            {/* Radius picker */}
+            <AnimatePresence>
+              {nearMeActive && (
+                <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} className="relative">
+                  <button
+                    onClick={() => setShowRadiusPicker((p) => !p)}
+                    className="flex items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-400 transition hover:bg-violet-500/20 md:py-2.5 md:text-sm"
+                  >
+                    <SlidersHorizontal size={13} />
+                    {nearMeRadius} km
+                  </button>
+                  {showRadiusPicker && (
+                    <div className="absolute left-0 top-full z-30 mt-1.5 min-w-[100px] overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-[0_16px_48px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
+                      {RADIUS_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => { setNearMeRadius(opt.value); setShowRadiusPicker(false); }}
+                          className={`w-full px-4 py-2.5 text-left text-sm transition hover:bg-white/8 ${
+                            nearMeRadius === opt.value ? 'font-bold text-violet-400' : 'text-slate-400'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Active/Expired toggle */}
+            <button
+              onClick={() => setShowExpired((p) => !p)}
+              className={`ml-auto flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all duration-200 md:px-4 md:py-2.5 md:text-sm ${
+                showExpired
+                  ? 'border-slate-500/30 bg-slate-500/20 text-slate-300'
+                  : 'border-white/10 bg-white/5 text-slate-500 hover:border-white/20 hover:text-slate-300'
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${showExpired ? 'bg-amber-400' : 'bg-emerald-400 shadow-neon-emerald'}`} />
+              {showExpired ? 'Showing all' : 'Active only'}
             </button>
           </div>
-        )}
 
-        <div className="sticky top-[64px] z-20 mb-3 rounded-2xl border border-white/70 bg-white/70 p-2 backdrop-blur md:mb-4">
-        <div className="mb-3 flex flex-wrap items-center gap-2 md:mb-4 md:gap-3">
-          <button
-            onClick={handleNearMe}
-            disabled={geoStatus === 'loading'}
-            className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all md:px-4 md:py-2.5 md:text-sm
-              ${nearMeActive
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-indigo-400 hover:text-indigo-700'
-              } ${geoStatus === 'loading' ? 'opacity-70 cursor-wait' : ''}`}
-          >
-            <LocateFixed size={16} className={geoStatus === 'loading' ? 'animate-spin' : ''} />
-            {geoStatus === 'loading' ? 'Locating…' : nearMeActive ? 'Near Me ✓' : 'Near Me'}
-            {geoStatus === 'ip-fallback' && nearMeActive && (
-              <span className="text-xs bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-full ml-1">approx</span>
-            )}
-          </button>
-
+          {/* Geo alerts */}
           <AnimatePresence>
-            {nearMeActive && (
-              <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} className="relative">
-                <button
-                  onClick={() => setShowRadiusPicker((p) => !p)}
-                  className="flex items-center gap-1.5 rounded-xl border border-indigo-300 bg-white px-3 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-50 md:py-2.5 md:text-sm"
-                >
-                  <SlidersHorizontal size={14} />
-                  {nearMeRadius} km
-                </button>
-                {showRadiusPicker && (
-                  <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-30 min-w-[110px]">
-                    {RADIUS_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => { setNearMeRadius(opt.value); setShowRadiusPicker(false); }}
-                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-indigo-50 transition
-                          ${nearMeRadius === opt.value ? 'text-indigo-700 font-semibold bg-indigo-50' : 'text-gray-700'}`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+            {geoStatus === 'ip-fallback' && nearMeActive && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="mb-3 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2.5 text-xs text-amber-400"
+              >
+                <Info size={12} className="mt-0.5 shrink-0" />
+                Using approximate location (GPS unavailable). Results may include deals slightly outside your area.
+              </motion.div>
+            )}
+            {geoStatus === 'denied' && !nearMeActive && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="mb-3 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2.5 text-xs text-rose-400 space-y-1"
+              >
+                <p className="flex items-center gap-1.5 font-semibold"><AlertCircle size={12} /> Location permission denied</p>
+                <p>Mac: System Settings → Privacy → Location Services → enable your browser.</p>
+                <p>Chrome: Click lock icon → Site settings → Location → Allow.</p>
+              </motion.div>
+            )}
+            {geoStatus === 'error' && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="mb-3 flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2.5 text-xs text-rose-400"
+              >
+                <AlertCircle size={12} /> Could not detect location. Try again or use search.
               </motion.div>
             )}
           </AnimatePresence>
 
-          <button
-            onClick={() => setShowExpired((p) => !p)}
-            className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all md:ml-auto md:px-4 md:py-2.5 md:text-sm
-              ${showExpired ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}
-          >
-            <span className={`w-2 h-2 rounded-full ${showExpired ? 'bg-yellow-400' : 'bg-green-400'}`} />
-            {showExpired ? 'Showing all' : 'Active only'}
-          </button>
-        </div>
+          {/* Category pills */}
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {CATEGORY_FILTERS.map((cat) => {
+              const meta = cat.value === 'all' ? null : getCategoryMeta(cat.value);
+              const active = selectedCategory === cat.value;
+              return (
+                <button
+                  key={cat.value}
+                  onClick={() => setSelectedCategory(cat.value)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 md:px-4 md:py-2 md:text-sm ${
+                    active
+                      ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-neon-violet scale-105'
+                      : 'border border-white/8 bg-white/5 text-slate-400 hover:border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-400'
+                  }`}
+                >
+                  {meta && <span className="text-sm leading-none">{meta.emoji}</span>}
+                  {cat.label}
+                </button>
+              );
+            })}
+          </div>
 
-        <AnimatePresence>
-          {geoStatus === 'ip-fallback' && nearMeActive && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-              className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-4">
-              <Info size={13} className="mt-0.5 shrink-0" />
-              <span>Using approximate location (GPS unavailable). Results may include deals slightly outside your area.</span>
-            </motion.div>
-          )}
-
-          {geoStatus === 'denied' && !nearMeActive && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-              className="text-xs bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mb-4 space-y-1">
-              <p className="flex items-center gap-1.5 text-red-700 font-medium"><AlertCircle size={13} /> Location permission denied</p>
-              <p className="text-red-600"><strong>Mac:</strong> System Settings → Privacy & Security → Location Services → enable Chrome.</p>
-              <p className="text-red-600"><strong>Chrome:</strong> Click lock icon → Site settings → Location → Allow.</p>
-            </motion.div>
-          )}
-
-          {geoStatus === 'error' && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-              className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mb-4">
-              <AlertCircle size={13} /> Could not detect location. Try again or use search.
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="mb-2 flex gap-2 overflow-x-auto pb-3 md:mb-3 md:gap-3">
-          {CATEGORY_FILTERS.map((cat) => (
-            <button
-              key={cat.value}
-              onClick={() => setSelectedCategory(cat.value)}
-              className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-200 md:px-5 md:py-2 md:text-sm
-                ${selectedCategory === cat.value
-                  ? 'scale-105 bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white shadow-lg'
-                  : 'bg-white/90 text-gray-700 shadow hover:bg-indigo-50'
+          {/* Feed mode tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {FEED_MODES.map((mode) => (
+              <button
+                key={mode.key}
+                onClick={() => setFeedMode(mode.key)}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all duration-200 md:px-3.5 md:py-2 md:text-sm ${
+                  feedMode === mode.key
+                    ? 'border-white/20 bg-white/15 text-white shadow-inner-top'
+                    : 'border-white/8 bg-transparent text-slate-500 hover:border-white/15 hover:text-slate-300'
                 }`}
-            >
-              {cat.label}
-            </button>
-          ))}
+              >
+                <mode.icon size={13} /> {mode.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="mb-2 flex gap-2 overflow-x-auto pb-3 md:pb-4">
-          {[
-            { key: 'for-you' as const, label: 'For You', icon: Sparkles },
-            { key: 'personalized' as const, label: 'Personalized', icon: Sparkles },
-            { key: 'top-rated' as const, label: 'Top Rated', icon: Trophy },
-            { key: 'ending-soon' as const, label: 'Ending Soon', icon: Clock3 },
-            { key: 'trending' as const, label: 'Trending', icon: Flame },
-          ].map((mode) => (
-            <button
-              key={mode.key}
-              onClick={() => setFeedMode(mode.key)}
-              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs transition md:px-3.5 md:py-2 md:text-sm
-                ${feedMode === mode.key ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white/90 text-gray-700 hover:border-gray-300'}`}
-            >
-              <mode.icon size={14} /> {mode.label}
-            </button>
-          ))}
-        </div>
-        </div>
-
+        {/* ── Spotlight ── */}
         {spotlightDeal && !isFiltering && (
-          <div className="mb-4 rounded-2xl border border-indigo-100/70 bg-white/90 p-3.5 shadow-sm backdrop-blur md:mb-5 md:p-4">
-            <p className="text-xs text-indigo-600 font-semibold uppercase tracking-wide">Spotlight</p>
-            <div className="mt-1 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-              <p className="line-clamp-2 text-sm font-bold leading-snug text-gray-900 md:text-base">{spotlightDeal.title}</p>
-                <p className="truncate text-xs text-gray-500">{spotlightDeal.area || spotlightDeal.city || 'Location not set'} · {getCategoryLabel(spotlightDeal.category)}</p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-sm text-amber-500 font-semibold">★ {spotlightDeal.rating?.toFixed(1) || '0.0'}</p>
-                <p className="text-xs text-gray-400">{spotlightDeal.rating_count || 0} reviews</p>
+          <Link href={`/deal/${spotlightDeal.id}`} className="mb-5 block">
+            <div className="group relative overflow-hidden rounded-2xl border border-violet-500/20 bg-slate-900/80 p-4 transition-all duration-300 hover:border-violet-500/40 hover:shadow-card-hover md:p-5">
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-600/5 via-transparent to-fuchsia-600/5" />
+              <div className="relative flex items-center justify-between gap-4">
+                <div className="min-w-0 flex items-center gap-3">
+                  <span className="shrink-0 text-3xl">{getCategoryMeta(spotlightDeal.category).emoji}</span>
+                  <div className="min-w-0">
+                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-violet-400">✦ Spotlight Deal</p>
+                    <p className="line-clamp-1 text-base font-bold text-white md:text-lg">{spotlightDeal.title}</p>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {spotlightDeal.area || spotlightDeal.city || 'Location not set'} · {getCategoryLabel(spotlightDeal.category)}
+                    </p>
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-bold text-amber-400">★ {spotlightDeal.rating?.toFixed(1) || '0.0'}</p>
+                  <p className="text-xs text-slate-600">{spotlightDeal.rating_count || 0} reviews</p>
+                  <ChevronRight size={16} className="ml-auto mt-1 text-slate-600 transition group-hover:text-violet-400" />
+                </div>
               </div>
             </div>
-          </div>
+          </Link>
         )}
 
-        <div className="mb-3 flex items-center justify-between md:mb-4">
-          <p className="text-xs text-gray-500 md:text-sm">
-            <span className="font-semibold text-gray-800">{displayedDeals.length}</span> deals
-            {nearMeActive && ` within ${nearMeRadius} km`}
-            {searchQuery && ` · "${searchQuery}"`}
-            {!showExpired && ' · expired hidden'}
+        {/* ── Deal count + view toggle ── */}
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-xs text-slate-500 md:text-sm">
+            <span className="font-bold text-slate-200">{displayedDeals.length}</span> deals
+            {nearMeActive && <span className="text-slate-600"> · within {nearMeRadius} km</span>}
+            {searchQuery && <span className="text-slate-600"> · &quot;{searchQuery}&quot;</span>}
+            {!showExpired && <span className="text-slate-600"> · active only</span>}
           </p>
-          {isFiltering && (
-            <button onClick={clearAll} className="text-xs font-medium text-indigo-600 hover:underline">Clear</button>
-          )}
-        </div>
-        <div className="mb-4 flex items-center gap-2">
-          <button
-            onClick={() => setViewMode('list')}
-            className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium ${viewMode === 'list' ? 'bg-slate-900 text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
-          >
-            <List size={13} /> List
-          </button>
-          <button
-            onClick={() => setViewMode('map')}
-            className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium ${viewMode === 'map' ? 'bg-slate-900 text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
-          >
-            <MapPinned size={13} /> Map
-          </button>
+          <div className="flex items-center gap-2">
+            {isFiltering && (
+              <button onClick={clearAll} className="text-xs font-semibold text-violet-400 transition hover:text-violet-300">
+                Clear all
+              </button>
+            )}
+            <div className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/5 p-1">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${viewMode === 'list' ? 'bg-white/15 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                <List size={13} />
+              </button>
+              <button
+                onClick={() => setViewMode('map')}
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${viewMode === 'map' ? 'bg-white/15 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                <MapPinned size={13} />
+              </button>
+            </div>
+          </div>
         </div>
 
+        {/* ── Deals grid / Map / Empty ── */}
         {viewMode === 'map' ? (
-          <div className="mb-6 rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm">
-            <p className="text-sm font-semibold text-slate-800">Map discovery</p>
-            <p className="mt-1 text-xs text-slate-500">Open full map and explore nearby pins visually.</p>
-            <Link href="/map" className="mt-3 inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white">
-              Open full map <MapPinned size={12} />
-            </Link>
+          <div className="mb-6 overflow-hidden rounded-2xl border border-white/8 bg-slate-900/80">
+            <div className="border-b border-white/8 p-4">
+              <p className="font-bold text-white">Map Discovery</p>
+              <p className="mt-0.5 text-xs text-slate-500">Explore nearby deals visually on an interactive map.</p>
+            </div>
+            <div className="p-4">
+              <Link
+                href="/map"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2.5 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90"
+              >
+                <MapPinned size={14} /> Open Full Map
+              </Link>
+            </div>
           </div>
         ) : displayedDeals.length === 0 ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 text-gray-400">
-            <p className="text-5xl mb-4">🏷️</p>
-            <p className="text-lg font-medium text-gray-600">No deals found</p>
-            <p className="text-sm mt-1">
-              {nearMeActive ? `No deals within ${nearMeRadius} km — try increasing the radius.` : 'Try another filter or search term.'}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-24 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/8 bg-slate-900/80">
+              <Tag size={28} className="text-slate-600" />
+            </div>
+            <p className="text-lg font-bold text-slate-300">No deals found</p>
+            <p className="mt-1 text-sm text-slate-600">
+              {nearMeActive
+                ? `No deals within ${nearMeRadius} km — try increasing the radius.`
+                : 'Try another filter or search term.'}
             </p>
           </motion.div>
         ) : (
-          <motion.div layout className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-3">
+          <motion.div layout className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-3">
             <AnimatePresence>
               {displayedDeals.map((deal) => (
                 <motion.div
                   key={deal.id}
                   layout
-                  initial={{ opacity: 0, scale: 0.97 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.97 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.22 }}
                 >
                   <DealCard deal={deal} />
                 </motion.div>
@@ -584,32 +633,56 @@ export default function HomePage() {
             </AnimatePresence>
           </motion.div>
         )}
+
+        {/* ── Sections ── */}
         {!isFiltering && recentDeals.length > 0 && (
-          <section className="mt-8">
-            <h2 className="text-sm font-semibold text-slate-800">Recently viewed</h2>
-            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <section className="mt-10">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="h-4 w-1 rounded-full bg-gradient-to-b from-violet-500 to-fuchsia-500" />
+              <h2 className="text-sm font-bold text-white md:text-base">Recently Viewed</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {recentDeals.map((deal) => <DealCard key={`recent-${deal.id}`} deal={deal} />)}
             </div>
           </section>
         )}
+
         {!isFiltering && communityPicks.length > 0 && (
-          <section className="mt-8">
-            <h2 className="text-sm font-semibold text-slate-800">Community picks</h2>
-            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <section className="mt-10">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="h-4 w-1 rounded-full bg-gradient-to-b from-emerald-400 to-teal-500" />
+              <h2 className="text-sm font-bold text-white md:text-base">Community Picks</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {communityPicks.map((deal) => <DealCard key={`pick-${deal.id}`} deal={deal} />)}
             </div>
           </section>
         )}
+
         {!isFiltering && endingSoonDeals.length > 0 && (
-          <section className="mt-8">
-            <h2 className="text-sm font-semibold text-slate-800">Ending soon</h2>
-            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {endingSoonDeals.map((deal) => (
-                <Link key={`soon-${deal.id}`} href={`/deal/${deal.id}`} className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">
-                  <p className="line-clamp-1 font-semibold text-slate-800">{deal.title}</p>
-                  <p className="mt-1 text-xs text-amber-700">{getUrgencyLabel(deal.valid_till_date)}</p>
-                </Link>
-              ))}
+          <section className="mt-10">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="h-4 w-1 rounded-full bg-gradient-to-b from-rose-500 to-amber-500" />
+              <h2 className="text-sm font-bold text-white md:text-base">Ending Soon</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {endingSoonDeals.map((deal) => {
+                const meta = getCategoryMeta(deal.category);
+                return (
+                  <Link
+                    key={`soon-${deal.id}`}
+                    href={`/deal/${deal.id}`}
+                    className="group rounded-xl border border-rose-500/20 bg-rose-500/5 p-3.5 transition-all duration-200 hover:border-rose-500/40 hover:bg-rose-500/10"
+                  >
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="text-lg">{meta.emoji}</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-rose-400/70">{getCategoryLabel(deal.category)}</span>
+                    </div>
+                    <p className="line-clamp-2 text-sm font-semibold text-white group-hover:text-rose-300">{deal.title}</p>
+                    <p className="mt-1.5 text-xs font-medium text-rose-400">{getUrgencyLabel(deal.valid_till_date)}</p>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}

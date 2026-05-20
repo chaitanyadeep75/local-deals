@@ -6,7 +6,6 @@ import MobileBottomNav from './components/MobileBottomNav';
 import ServiceWorkerRegistrar from './components/Serviceworkerregistrar';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 
-
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -23,7 +22,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'LocalDeals',
   },
   formatDetection: {
@@ -44,23 +43,35 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* PWA essentials */}
         <link rel="manifest" href="/manifest.json" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="LocalDeals" />
-        <meta name="theme-color" content="#7c3aed" />
-
-        {/* Apple touch icon - point to your 192 icon */}
+        <meta name="theme-color" content="#020617" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased pb-20`}
-      ><ServiceWorkerRegistrar />
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased pb-20 bg-slate-950`}>
+        {/* Aurora background — fixed, behind everything */}
+        <div className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 0 }}>
+          <div
+            className="absolute -top-48 -left-48 h-[500px] w-[500px] rounded-full bg-violet-600/[0.12] blur-[120px] animate-aurora-1"
+          />
+          <div
+            className="absolute -top-24 right-[-100px] h-[400px] w-[400px] rounded-full bg-fuchsia-600/[0.09] blur-[100px] animate-aurora-2"
+          />
+          <div
+            className="absolute bottom-0 -left-32 h-[350px] w-[350px] rounded-full bg-indigo-600/[0.08] blur-[100px]"
+          />
+          <div
+            className="absolute bottom-40 right-8 h-[280px] w-[280px] rounded-full bg-cyan-500/[0.06] blur-[80px]"
+          />
+        </div>
+
+        <ServiceWorkerRegistrar />
         <PWAInstallPrompt />
         <Navbar />
-        <main className="app-container">{children}</main>
+        <main className="app-container" style={{ position: 'relative', zIndex: 1 }}>{children}</main>
         <MobileBottomNav />
       </body>
     </html>

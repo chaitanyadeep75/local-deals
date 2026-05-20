@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx expo@latest install expo-router @supabase/supabase-js expo-secure-store expo-constants @react-native-async-storage/async-storage react-native-url-polyfill nativewind tailwindcss react-native-safe-area-context react-native-screens expo-status-bar)",
+      "Read(//proc/48710/fd/**)",
+      "Bash(jobs -l)",
+      "Bash(kill 48710)",
+      "Bash(npx create-expo-app@latest mobile --template blank-typescript --no-install)",
+      "Bash(npm install:*)",
+      "Bash(ls /Users/chaitanyad/local-deals/mobile/app /Users/chaitanyad/local-deals/mobile/app/\\\\\\(tabs\\\\\\) /Users/chaitanyad/local-deals/mobile/app/deal /Users/chaitanyad/local-deals/mobile/lib)",
+      "Bash(grep -E '\\\\.\\(ts|tsx|js|jsx|css\\)$')",
+      "Bash(git -C /Users/chaitanyad/local-deals log --oneline)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next:*)",
+      "Bash(grep -v \"^$\")"
+    ]
+  }
+}

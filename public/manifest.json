@@ -1,0 +1,16 @@
+{
+  "name": "LocalDeals",
+  "short_name": "LocalDeals",
+  "description": "Discover local deals and offers near you",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/next.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -4,10 +4,12 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
 export default function AccountScreen() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,6 +51,14 @@ export default function AccountScreen() {
               <Text style={{ fontSize: 12, fontWeight: '600', color: '#059669' }}>Logged in</Text>
             </View>
           </View>
+
+          <TouchableOpacity
+            onPress={() => router.push('/business/dashboard')}
+            style={{ marginBottom: 12, alignItems: 'center', borderRadius: 16, backgroundColor: '#4f46e5', paddingVertical: 14, flexDirection: 'row', justifyContent: 'center', gap: 8 }}
+          >
+            <Text style={{ fontSize: 16 }}>🏢</Text>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Business Dashboard</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => supabase.auth.signOut()}
@@ -111,6 +121,13 @@ export default function AccountScreen() {
               <Text style={{ fontWeight: '700', color: '#4f46e5' }}>
                 {mode === 'login' ? 'Sign up' : 'Sign in'}
               </Text>
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.push('/business/signup')} style={{ marginTop: 12, alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, color: '#64748b' }}>
+              Own a business?{' '}
+              <Text style={{ fontWeight: '700', color: '#4f46e5' }}>Register as Business →</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>
