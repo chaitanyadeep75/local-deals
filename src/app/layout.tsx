@@ -51,7 +51,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#020617" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased pb-20 bg-slate-950`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased pb-24 bg-slate-950`}>
         {/* Aurora background — fixed, behind everything */}
         <div className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 0 }}>
           <div

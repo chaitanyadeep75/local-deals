@@ -324,7 +324,7 @@ export default function DealCard({ deal }: { deal: Deal }) {
     await upsertReview(value);
   };
 
-  const submitReview = async (e: React.FormEvent) => {
+  const submitReview = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     void trackEvent('review_submitted', { deal_id: deal.id, rating: reviewRating });
     await upsertReview(reviewRating, reviewComment.trim());
@@ -334,7 +334,7 @@ export default function DealCard({ deal }: { deal: Deal }) {
     <>
       <div
         onClick={openDeal}
-        className="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-slate-900/95 shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:border-violet-500/30 hover:shadow-card-hover"
+        className="card-press group relative cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-slate-900/95 shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:border-violet-500/30 hover:shadow-card-hover active:scale-[0.97] active:opacity-90"
       >
         {/* Subtle inner top highlight */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />

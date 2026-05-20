@@ -184,3 +184,37 @@ body {
   mask-composite: exclude;
   pointer-events: none;
 }
+
+/* ─── Mobile native app feel ─── */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+html,
+body {
+  overscroll-behavior: none;
+}
+
+/* Momentum scrolling for horizontal strips on iOS */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tighter container padding on small phones */
+@media (max-width: 480px) {
+  .app-container {
+    padding: 10px;
+  }
+}
+
+/* Card press animation */
+@keyframes card-press {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+
+.card-press:active {
+  animation: card-press 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}

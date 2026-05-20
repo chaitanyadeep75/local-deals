@@ -114,7 +114,7 @@ export default function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
+      className={`hidden md:block sticky top-0 z-50 transition-all duration-300 ${
         scrolled
           ? 'border-b border-white/8 bg-slate-950/90 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl'
           : 'border-b border-white/5 bg-slate-950/75 backdrop-blur-xl'

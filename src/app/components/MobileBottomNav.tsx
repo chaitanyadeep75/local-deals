@@ -3,16 +3,14 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import type { ComponentType } from 'react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import {
   Home,
   LayoutDashboard,
-  UserCircle2,
-  LogOut,
   Bookmark,
   MapPinned,
   Shield,
+  UserCircle2,
 } from 'lucide-react';
 import { supabase } from '@/app/lib/supabase';
 import { trackEvent } from '@/app/lib/analytics';
@@ -32,8 +30,12 @@ export default function MobileBottomNav() {
       setIsBusiness(data.user.user_metadata?.role === 'business');
       if (data.user.user_metadata?.role === 'admin') setIsAdmin(true);
       else {
-        const adminRow = await supabase.from('admin_users').select('user_id').eq('user_id', data.user.id).maybeSingle();
-        setIsAdmin(!!adminRow.data);
+        const row = await supabase
+          .from('admin_users')
+          .select('user_id')
+          .eq('user_id', data.user.id)
+          .maybeSingle();
+        setIsAdmin(!!row.data);
       }
     };
     init();
@@ -45,60 +47,141 @@ export default function MobileBottomNav() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const navItem = (
-    href: string,
-    label: string,
-    Icon: ComponentType<{ size?: number }>
-  ) => {
-    const active = pathname === href || pathname?.startsWith(`${href}/`);
-    return (
-      <Link
-        href={href}
-        onClick={() => { void trackEvent('mobile_nav_click', { href, label }); }}
-        className={`relative flex min-w-0 flex-col items-center gap-1 rounded-2xl px-3 py-2 text-[11px] font-medium transition-all duration-200 ${
-          active
-            ? 'text-violet-400'
-            : 'text-slate-500 hover:text-slate-300'
-        }`}
-      >
-        {active && (
-          <span className="absolute inset-0 rounded-2xl bg-violet-500/15 border border-violet-500/20" />
-        )}
-        <Icon size={20} />
-        <span className="relative">{label}</span>
-      </Link>
-    );
-  };
+  const initial = (
+    user?.user_metadata?.full_name?.[0] ||
+    user?.email?.[0] ||
+    '?'
+  ).toUpperCase();
+
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : !!pathname?.startsWith(href);
+
+  // slot 3 is context-sensitive
+  const slot3 = isAdmin
+    ? { href: '/admin', label: 'Admin', Icon: Shield }
+    : isBusiness
+    ? { href: '/business/dashboard', label: 'Dash', Icon: LayoutDashboard }
+    : user
+    ? { href: '/user/profile', label: 'Saved', Icon: Bookmark }
+    : { href: '/user/login', label: 'Login', Icon: UserCircle2 };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/8 bg-slate-950/90 backdrop-blur-2xl md:hidden">
-      <div className="mx-auto grid max-w-lg grid-cols-4 items-center gap-1 px-2 pb-[max(10px,env(safe-area-inset-bottom))] pt-2">
-        {navItem('/', 'Home', Home)}
-        {navItem('/map', 'Map', MapPinned)}
-        {user && isAdmin && navItem('/admin', 'Admin', Shield)}
-        {user && isBusiness && navItem('/business/dashboard', 'Dash', LayoutDashboard)}
-        {user && !isBusiness && navItem('/user/profile', 'Saved', Bookmark)}
-        {!user && navItem('/user/login', 'Login', UserCircle2)}
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.07] bg-slate-950/96 backdrop-blur-3xl md:hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div className="mx-auto flex max-w-lg items-center justify-around px-1 pt-1.5 pb-2">
 
+        {/* ── Home ── */}
+        <NavTab href="/" label="Home" icon={Home} active={isActive('/')} />
+
+        {/* ── Map — gradient pill, always stands out ── */}
+        <Link
+          href="/map"
+          onClick={() => void trackEvent('mobile_nav_click', { href: '/map', label: 'Map' })}
+          className="flex flex-1 flex-col items-center gap-1 py-1 select-none active:opacity-60 transition-opacity duration-75"
+        >
+          <div
+            className={`flex h-11 w-11 items-center justify-center rounded-[16px] transition-all duration-200 ${
+              isActive('/map')
+                ? 'bg-gradient-to-br from-violet-400 to-fuchsia-500 shadow-[0_4px_20px_rgba(139,92,246,0.65)] scale-110'
+                : 'bg-gradient-to-br from-violet-600/80 to-fuchsia-600/80 shadow-[0_2px_14px_rgba(139,92,246,0.35)]'
+            }`}
+          >
+            <MapPinned size={22} className="text-white" />
+          </div>
+          <span
+            className={`text-[10px] font-bold transition-colors duration-200 ${
+              isActive('/map') ? 'text-violet-400' : 'text-slate-400'
+            }`}
+          >
+            Map
+          </span>
+        </Link>
+
+        {/* ── Slot 3 ── */}
+        <NavTab
+          href={slot3.href}
+          label={slot3.label}
+          icon={slot3.Icon}
+          active={isActive(slot3.href)}
+        />
+
+        {/* ── Me / Account ── */}
         <button
           onClick={async () => {
-            if (!user) {
-              void trackEvent('mobile_nav_click', { href: '/signup', label: 'Sign up' });
-              router.push('/signup');
-              return;
-            }
+            if (!user) { router.push('/login'); return; }
             await supabase.auth.signOut();
             localStorage.removeItem('ld_role_hint');
             void trackEvent('mobile_logout', { source: 'mobile_bottom_nav' });
             router.push('/');
           }}
-          className="flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-[11px] font-medium text-slate-500 transition-all duration-200 hover:text-rose-400"
-          aria-label="Logout or signup"
+          className="flex flex-1 flex-col items-center gap-1 py-1 select-none active:opacity-60 transition-opacity duration-75"
         >
-          <LogOut size={20} />
-          {user ? 'Logout' : 'Sign up'}
+          {user ? (
+            <>
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-[14px] text-[13px] font-extrabold text-white shadow-md transition-all duration-200 ${
+                  isBusiness
+                    ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-[0_2px_10px_rgba(139,92,246,0.45)]'
+                    : 'bg-gradient-to-br from-emerald-400 to-teal-500 shadow-[0_2px_10px_rgba(52,211,153,0.35)]'
+                }`}
+              >
+                {initial}
+              </div>
+              <span className="text-[10px] font-bold text-slate-500">Logout</span>
+            </>
+          ) : (
+            <>
+              <div className="flex h-9 w-9 items-center justify-center rounded-[14px] border border-white/10 bg-white/5">
+                <UserCircle2 size={20} className="text-slate-500" />
+              </div>
+              <span className="text-[10px] font-bold text-slate-500">Sign Up</span>
+            </>
+          )}
         </button>
+
       </div>
     </nav>
+  );
+}
+
+function NavTab({
+  href,
+  label,
+  icon: Icon,
+  active,
+}: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={() => void trackEvent('mobile_nav_click', { href, label })}
+      className="flex flex-1 flex-col items-center gap-1 py-1 select-none active:opacity-60 transition-opacity duration-75"
+    >
+      <div
+        className={`flex h-9 w-9 items-center justify-center rounded-[14px] transition-all duration-200 ${
+          active ? 'bg-violet-500/20 scale-110' : 'scale-100'
+        }`}
+      >
+        <Icon
+          size={21}
+          className={`transition-colors duration-200 ${
+            active ? 'text-violet-400' : 'text-slate-500'
+          }`}
+        />
+      </div>
+      <span
+        className={`text-[10px] font-bold transition-colors duration-200 ${
+          active ? 'text-violet-400' : 'text-slate-500'
+        }`}
+      >
+        {label}
+      </span>
+    </Link>
   );
 }
