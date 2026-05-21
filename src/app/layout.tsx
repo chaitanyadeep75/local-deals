@@ -50,7 +50,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="LocalDeals" />
         <meta name="theme-color" content="#020617" />
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" href="/icons/icon.svg" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased pb-24 bg-slate-950`}>
         {/* Aurora background — fixed, behind everything */}

@@ -1,16 +1,40 @@
 {
   "name": "LocalDeals",
   "short_name": "LocalDeals",
-  "description": "Discover local deals and offers near you",
+  "description": "Discover premium local deals near you",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#020617",
-  "theme_color": "#7c3aed",
+  "theme_color": "#020617",
+  "lang": "en",
   "icons": [
     {
-      "src": "/next.svg",
+      "src": "/icons/icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Deals",
+      "short_name": "Deals",
+      "url": "/",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Map View",
+      "short_name": "Map",
+      "url": "/map",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
     }
   ]
 }

@@ -185,7 +185,7 @@ body {
   pointer-events: none;
 }
 
-/* ─── Mobile native app feel ─── */
+/* ─── Mobile / PWA native app feel ─── */
 * {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
@@ -194,6 +194,8 @@ body {
 html,
 body {
   overscroll-behavior: none;
+  /* fill the safe area on notch phones */
+  background-color: #020617;
 }
 
 /* Momentum scrolling for horizontal strips on iOS */
@@ -201,10 +203,11 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Tighter container padding on small phones */
-@media (max-width: 480px) {
-  .app-container {
-    padding: 10px;
+/* Standalone PWA: hide any residual browser chrome artifacts */
+@media (display-mode: standalone) {
+  body {
+    /* top safe area already handled by viewport-fit=cover */
+    padding-top: env(safe-area-inset-top);
   }
 }
 
