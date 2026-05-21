@@ -68,15 +68,15 @@ export default function UserSignupPage() {
   };
 
   return (
-    <main className="relative flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-12">
+    <main className="relative min-h-screen px-4 pb-28 pt-8">
       {/* Blobs */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-32 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-emerald-600/15 blur-[90px]" />
-        <div className="absolute bottom-8 left-1/4 h-48 w-48 rounded-full bg-violet-600/10 blur-[60px]" />
+        <div className="absolute -top-16 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-emerald-600/15 blur-[90px]" />
+        <div className="absolute bottom-1/3 left-1/4 h-48 w-48 rounded-full bg-violet-600/10 blur-[60px]" />
       </div>
 
-      <div className="relative w-full max-w-sm">
-        <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
+      <div className="relative w-full">
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
           <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-violet-500" />
 
           <div className="p-7">
