@@ -305,49 +305,33 @@ export default function HomePage() {
 
       {/* ── Hero ── */}
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}>
-        <div className="relative mb-6 mt-2 overflow-hidden rounded-2xl border border-white/10 md:mb-8 md:mt-4">
+        <div className="relative mb-5 mt-2 overflow-hidden rounded-2xl border border-white/10">
           {/* Gradient background */}
           <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-fuchsia-600 to-indigo-700" />
-          {/* Noise/texture overlay */}
-          <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.75\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.15\'/%3E%3C/svg%3E")', backgroundSize: '200px' }} />
-          {/* Glowing orbs inside hero */}
           <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-fuchsia-300/20 blur-3xl" />
 
-          <div className="relative px-4 py-5 text-white lg:px-10 lg:py-10">
-            <div className="mb-2.5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-sm">
-              <Sparkles size={11} className="text-yellow-300" />
-              Live deals · updated daily
+          {/* ── Mobile hero (always shows) ── */}
+          <div className="relative px-5 py-6 text-white">
+            <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+              <Sparkles size={10} className="text-yellow-300" />
+              {allDeals.length} live deals · updated daily
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-white lg:text-4xl xl:text-5xl">
-              Every Deal Near You.
+            <h1 className="text-3xl font-black leading-tight tracking-tight text-white">
+              Every Deal<br />Near You.
               <br />
-              <span className="text-yellow-300">Every Kind of Shop.</span>
+              <span className="text-yellow-300">Every Shop.</span>
             </h1>
-            <p className="mt-2 max-w-lg text-xs text-white/75 md:mt-2.5 md:text-base">
-              Food, salons, mechanics, coaching, resorts, gyms, grocery &amp; more — local offers from every business around you.
+            <p className="mt-2.5 text-sm font-medium text-white/70">
+              Food · Salons · Gyms · Grocery · and 20+ more
             </p>
-            {/* Shop type chips — hidden on mobile to save space */}
-            <div className="mt-3 hidden flex-wrap gap-2 lg:flex">
-              {['🍽️ Restaurants', '🔧 Mechanic', '📚 Education', '🏨 Resorts', '💇 Salons', '🛒 Grocery', '🏋️ Gyms', '💊 Pharmacy'].map((s) => (
-                <span key={s} className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">{s}</span>
-              ))}
-            </div>
-
-            {/* Stats bar — hidden on mobile */}
-            <div className="mt-3 hidden flex-wrap gap-2 lg:flex lg:mt-5 lg:gap-3">
-              {[
-                { label: 'Live Deals', value: allDeals.length, color: 'bg-white/15' },
-                { label: 'Showing', value: deals.length, color: 'bg-white/15' },
-                { label: feedMode.replace('-', ' '), value: null, color: 'bg-yellow-400/20 border border-yellow-400/30' },
-              ].map((stat) => (
-                <div key={stat.label} className={`rounded-xl ${stat.color} px-3.5 py-2 backdrop-blur-sm`}>
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-white/70">{stat.label}</p>
-                  <p className="mt-0.5 text-base font-extrabold text-white">
-                    {stat.value !== null ? stat.value : <span className="capitalize text-sm">{feedMode.replace('-', ' ')}</span>}
-                  </p>
-                </div>
-              ))}
+            <div className="mt-4 flex items-center gap-2">
+              <span className="rounded-xl bg-white/15 px-3.5 py-2 text-sm font-bold text-white backdrop-blur-sm">
+                {deals.length} showing
+              </span>
+              <span className="rounded-xl border border-yellow-400/30 bg-yellow-400/15 px-3.5 py-2 text-sm font-bold capitalize text-yellow-300 backdrop-blur-sm">
+                {feedMode.replace('-', ' ')}
+              </span>
             </div>
           </div>
         </div>
@@ -611,7 +595,7 @@ export default function HomePage() {
           </motion.button>
         )}
 
-        {/* ── Spotlight — desktop only, saves mobile scroll ── */}
+        {/* ── Spotlight — desktop only ── */}
         {spotlightDeal && !isFiltering && (
           <Link href={`/deal/${spotlightDeal.id}`} className="mb-5 hidden lg:block">
             <div className="group relative overflow-hidden rounded-2xl border border-violet-500/20 bg-slate-900/80 p-4 transition-all duration-300 hover:border-violet-500/40 hover:shadow-card-hover md:p-5">
