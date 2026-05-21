@@ -359,33 +359,17 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Business CTA Banner */}
+        {/* Business CTA — slim strip */}
         {!isBusiness && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="mb-4"
+          <Link
+            href="/login"
+            className="mb-3 flex items-center gap-3 rounded-xl border border-amber-500/25 bg-gradient-to-r from-amber-950/50 to-slate-900/80 px-4 py-3 active:opacity-70"
           >
-            <div className="relative overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-r from-amber-950/60 via-slate-900/80 to-violet-950/60">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-violet-500/8" />
-              <div className="relative flex items-center gap-4 p-4 md:p-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-xl shadow-[0_0_20px_rgba(245,158,11,0.4)]">
-                  🏪
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white md:text-base">Own a local business?</p>
-                  <p className="mt-0.5 text-xs text-slate-400">Post deals for free · reach thousands nearby · no commission.</p>
-                </div>
-                <Link
-                  href="/login"
-                  className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-xs font-bold text-white shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all duration-200 hover:opacity-90 hover:shadow-[0_0_28px_rgba(245,158,11,0.5)]"
-                >
-                  List Free →
-                </Link>
-              </div>
-            </div>
-          </motion.div>
+            <span className="text-lg leading-none">🏪</span>
+            <span className="flex-1 text-sm text-slate-300">
+              Own a business? <span className="font-bold text-amber-400">List deals free →</span>
+            </span>
+          </Link>
         )}
 
         {/* Network error */}
@@ -397,48 +381,24 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Onboarding */}
+        {/* Onboarding — compact single row */}
         {showOnboarding && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-4 overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-950/50 via-slate-900/80 to-fuchsia-950/30"
+            className="mb-3 flex items-center gap-3 rounded-xl border border-violet-500/20 bg-violet-500/8 px-4 py-3"
           >
-            <div className="flex items-center justify-between border-b border-violet-500/10 px-4 py-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-violet-400">Welcome to LocalDeals</p>
-                <p className="mt-0.5 text-sm font-semibold text-white">Find the best deals around you</p>
-              </div>
-              <button
-                onClick={() => { localStorage.setItem('ld_onboarding_done', '1'); setShowOnboarding(false); }}
-                className="rounded-lg bg-white/5 p-1.5 text-slate-500 transition hover:text-slate-300"
-              >
-                <X size={14} />
-              </button>
-            </div>
-            <div className="grid divide-y divide-white/5 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
-              {[
-                { icon: '📍', label: 'Find Nearby', desc: 'Enable Near Me to discover deals within your radius' },
-                { icon: '🏷️', label: 'Browse Categories', desc: 'Filter by food, salons, gyms, and 20+ categories' },
-                { icon: '❤️', label: 'Save & Personalise', desc: 'Save deals to get a personalised feed just for you' },
-              ].map((step, i) => (
-                <div key={i} className="flex items-start gap-3 px-4 py-4">
-                  <span className="mt-0.5 text-2xl leading-none">{step.icon}</span>
-                  <div>
-                    <p className="text-xs font-bold text-white">{step.label}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">{step.desc}</p>
-                  </div>
-                </div>
+            <div className="flex flex-1 items-center gap-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {['📍 Near Me', '🏷️ Categories', '❤️ Save deals'].map((tip) => (
+                <span key={tip} className="shrink-0 text-sm font-medium text-slate-300">{tip}</span>
               ))}
             </div>
-            <div className="border-t border-violet-500/10 px-4 py-2.5">
-              <button
-                onClick={() => { localStorage.setItem('ld_onboarding_done', '1'); setShowOnboarding(false); }}
-                className="text-xs font-semibold text-violet-400 transition hover:text-violet-300"
-              >
-                Got it, let&apos;s explore →
-              </button>
-            </div>
+            <button
+              onClick={() => { localStorage.setItem('ld_onboarding_done', '1'); setShowOnboarding(false); }}
+              className="shrink-0 rounded-lg bg-white/5 p-1.5 text-slate-500 transition hover:text-white"
+            >
+              <X size={14} />
+            </button>
           </motion.div>
         )}
 
@@ -451,7 +411,7 @@ export default function HomePage() {
             <button
               onClick={handleNearMe}
               disabled={geoStatus === 'loading'}
-              className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all duration-200 md:px-4 md:py-2.5 md:text-sm ${
+              className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
                 nearMeActive
                   ? 'border-violet-500/40 bg-violet-500/20 text-violet-300 shadow-neon-violet'
                   : 'border-white/10 bg-white/5 text-slate-400 hover:border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-400'
@@ -470,7 +430,7 @@ export default function HomePage() {
                 <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} className="relative">
                   <button
                     onClick={() => setShowRadiusPicker((p) => !p)}
-                    className="flex items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-400 transition hover:bg-violet-500/20 md:py-2.5 md:text-sm"
+                    className="flex items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2.5 text-sm font-semibold text-violet-400 transition hover:bg-violet-500/20"
                   >
                     <SlidersHorizontal size={13} />
                     {nearMeRadius} km
@@ -497,7 +457,7 @@ export default function HomePage() {
             {/* Active/Expired toggle */}
             <button
               onClick={() => setShowExpired((p) => !p)}
-              className={`ml-auto flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all duration-200 md:px-4 md:py-2.5 md:text-sm ${
+              className={`ml-auto flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
                 showExpired
                   ? 'border-slate-500/30 bg-slate-500/20 text-slate-300'
                   : 'border-white/10 bg-white/5 text-slate-500 hover:border-white/20 hover:text-slate-300'
@@ -545,7 +505,7 @@ export default function HomePage() {
                 <button
                   key={cat.value}
                   onClick={() => setSelectedCategory(cat.value)}
-                  className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 md:px-4 md:py-2 md:text-sm ${
+                  className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
                     active
                       ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-neon-violet scale-105'
                       : 'border border-white/8 bg-white/5 text-slate-400 hover:border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-400'
@@ -564,7 +524,7 @@ export default function HomePage() {
               <button
                 key={mode.key}
                 onClick={() => setFeedMode(mode.key)}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all duration-200 md:px-3.5 md:py-2 md:text-sm ${
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-all duration-200 ${
                   feedMode === mode.key
                     ? 'border-white/20 bg-white/15 text-white shadow-inner-top'
                     : 'border-white/8 bg-transparent text-slate-500 hover:border-white/15 hover:text-slate-300'
