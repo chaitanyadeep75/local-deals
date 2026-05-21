@@ -22,8 +22,8 @@ import {
   TrendingUp,
   Tag,
   ChevronRight,
+  Zap,
 } from 'lucide-react';
-import { getUrgencyLabel } from '@/app/lib/deal-utils';
 import Link from 'next/link';
 
 type Deal = {
@@ -104,7 +104,6 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [feedMode, setFeedMode] = useState<FeedMode>('for-you');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [networkIssue, setNetworkIssue] = useState<string | null>(null);
   const [recentDeals, setRecentDeals] = useState<Deal[]>([]);
   const [isBusiness, setIsBusiness] = useState(false);
@@ -140,10 +139,6 @@ export default function HomePage() {
     setNetworkIssue(null);
     setAllDeals(data || []);
   }, [showExpired]);
-
-  useEffect(() => {
-    setShowOnboarding(localStorage.getItem('ld_onboarding_done') !== '1');
-  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -276,16 +271,25 @@ export default function HomePage() {
     return sorted.sort(boostFirst);
   }, [deals, feedMode]);
 
-  const spotlightDeal = displayedDeals[0] || null;
-  const endingSoonDeals = displayedDeals
-    .filter((d) => { const l = getUrgencyLabel(d.valid_till_date); return l && l !== 'Expired'; })
-    .slice(0, 4);
-  const communityPicks = [...displayedDeals]
-    .sort((a, b) => ((b.rating_count || 0) + (b.clicks || 0)) - ((a.rating_count || 0) + (a.clicks || 0)))
-    .slice(0, 6);
   const dealsEndingToday = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     return allDeals.filter((d) => d.valid_till_date === today).length;
+  }, [allDeals]);
+
+  const hotDeals = useMemo(() =>
+    [...allDeals].sort((a, b) => ((b.clicks || 0) + (b.views || 0)) - ((a.clicks || 0) + (a.views || 0))).slice(0, 12),
+    [allDeals]);
+
+  const topRatedStrip = useMemo(() =>
+    [...allDeals].filter((d) => (d.rating || 0) >= 4).sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 12),
+    [allDeals]);
+
+  const endingSoonStrip = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return [...allDeals]
+      .filter((d) => d.valid_till_date && d.valid_till_date >= today)
+      .sort((a, b) => new Date(a.valid_till_date!).getTime() - new Date(b.valid_till_date!).getTime())
+      .slice(0, 12);
   }, [allDeals]);
 
   const searchSuggestions = useMemo(() => {
@@ -303,415 +307,436 @@ export default function HomePage() {
   return (
     <main className="relative min-h-screen pb-16">
 
-      {/* ── Hero ── */}
-      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}>
-        <div className="relative mb-5 mt-2 overflow-hidden rounded-2xl border border-white/10">
-          {/* Gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-fuchsia-600 to-indigo-700" />
-          <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-fuchsia-300/20 blur-3xl" />
-
-          {/* ── Mobile hero (always shows) ── */}
-          <div className="relative px-5 py-6 text-white">
-            <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
-              <Sparkles size={10} className="text-yellow-300" />
-              {allDeals.length} live deals · updated daily
-            </div>
-            <h1 className="text-3xl font-black leading-tight tracking-tight text-white">
-              Every Deal<br />Near You.
-              <br />
-              <span className="text-yellow-300">Every Shop.</span>
-            </h1>
-            <p className="mt-2.5 text-sm font-medium text-white/70">
-              Food · Salons · Gyms · Grocery · and 20+ more
-            </p>
-            <div className="mt-4 flex items-center gap-2">
-              <span className="rounded-xl bg-white/15 px-3.5 py-2 text-sm font-bold text-white backdrop-blur-sm">
-                {deals.length} showing
-              </span>
-              <span className="rounded-xl border border-yellow-400/30 bg-yellow-400/15 px-3.5 py-2 text-sm font-bold capitalize text-yellow-300 backdrop-blur-sm">
-                {feedMode.replace('-', ' ')}
-              </span>
-            </div>
+      {/* ── App Header ── */}
+      <div className="mb-3 flex items-center justify-between pt-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-[0_2px_12px_rgba(139,92,246,0.4)]">
+            <Zap size={15} className="text-white" fill="white" />
           </div>
-        </div>
-
-        {/* ── Search ── */}
-        <div className="relative mb-4">
-          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-800/80 px-4 py-3.5 shadow-card backdrop-blur-xl transition-all duration-200 focus-within:border-violet-500/40 focus-within:ring-2 focus-within:ring-violet-500/20">
-            <Search size={18} className="shrink-0 text-slate-500" />
-            <input
-              list="deal-search-suggestions"
-              className="flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder-slate-600"
-              style={{ border: 'none', padding: 0, boxShadow: 'none', borderRadius: 0, background: 'transparent' }}
-              placeholder="Search deals, brands, areas…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <datalist id="deal-search-suggestions">
-              {searchSuggestions.map((s) => <option key={s} value={s} />)}
-            </datalist>
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="rounded-lg bg-white/5 p-1 text-slate-500 transition hover:text-slate-300">
-                <X size={14} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Business CTA — slim strip */}
-        {!isBusiness && (
-          <Link
-            href="/login"
-            className="mb-3 flex items-center gap-3 rounded-xl border border-amber-500/25 bg-gradient-to-r from-amber-950/50 to-slate-900/80 px-4 py-3 active:opacity-70"
-          >
-            <span className="text-lg leading-none">🏪</span>
-            <span className="flex-1 text-sm text-slate-300">
-              Own a business? <span className="font-bold text-amber-400">List deals free →</span>
+          <span className="text-xl font-extrabold tracking-tight text-white">LocalDeals</span>
+          {allDeals.length > 0 && (
+            <span className="rounded-full border border-violet-500/30 bg-violet-500/15 px-2 py-0.5 text-[10px] font-bold text-violet-400">
+              {allDeals.length} live
             </span>
-          </Link>
-        )}
+          )}
+        </div>
+        <button
+          onClick={handleNearMe}
+          disabled={geoStatus === 'loading'}
+          className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all duration-200 ${
+            nearMeActive
+              ? 'border-violet-500/40 bg-violet-500/20 text-violet-300 shadow-[0_0_12px_rgba(139,92,246,0.25)]'
+              : 'border-white/10 bg-white/5 text-slate-400 active:bg-white/10'
+          } ${geoStatus === 'loading' ? 'cursor-wait opacity-60' : ''}`}
+        >
+          <LocateFixed size={13} className={geoStatus === 'loading' ? 'animate-spin' : ''} />
+          {geoStatus === 'loading' ? 'Locating…' : nearMeActive ? 'Near Me ✓' : 'Near Me'}
+        </button>
+      </div>
 
-        {/* Network error */}
-        {networkIssue && (
-          <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-400">
-            <WifiOff size={13} className="shrink-0" />
-            {networkIssue}
-            <button onClick={fetchDeals} className="ml-auto font-semibold text-amber-300 underline">Retry</button>
-          </div>
-        )}
-
-        {/* Onboarding — compact single row */}
-        {showOnboarding && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-3 flex items-center gap-3 rounded-xl border border-violet-500/20 bg-violet-500/8 px-4 py-3"
-          >
-            <div className="flex flex-1 items-center gap-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {['📍 Near Me', '🏷️ Categories', '❤️ Save deals'].map((tip) => (
-                <span key={tip} className="shrink-0 text-sm font-medium text-slate-300">{tip}</span>
-              ))}
-            </div>
-            <button
-              onClick={() => { localStorage.setItem('ld_onboarding_done', '1'); setShowOnboarding(false); }}
-              className="shrink-0 rounded-lg bg-white/5 p-1.5 text-slate-500 transition hover:text-white"
-            >
+      {/* ── Search ── */}
+      <div className="relative mb-4">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-800/80 px-4 py-3.5 backdrop-blur-xl transition-all duration-200 focus-within:border-violet-500/40 focus-within:ring-2 focus-within:ring-violet-500/20">
+          <Search size={18} className="shrink-0 text-slate-500" />
+          <input
+            list="deal-search-suggestions"
+            className="flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder-slate-600"
+            style={{ border: 'none', padding: 0, boxShadow: 'none', borderRadius: 0, background: 'transparent' }}
+            placeholder="Search deals, brands, areas…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <datalist id="deal-search-suggestions">
+            {searchSuggestions.map((s) => <option key={s} value={s} />)}
+          </datalist>
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="rounded-lg bg-white/5 p-1 text-slate-500 transition hover:text-slate-300">
               <X size={14} />
             </button>
-          </motion.div>
-        )}
+          )}
+        </div>
+      </div>
 
-        {/* ── Sticky filter bar ── */}
-        <div className="sticky top-0 z-20 mb-4 rounded-2xl border border-white/8 bg-slate-900/85 p-3 backdrop-blur-2xl lg:top-[60px]">
-
-          {/* Controls row */}
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            {/* Near Me */}
-            <button
-              onClick={handleNearMe}
-              disabled={geoStatus === 'loading'}
-              className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
-                nearMeActive
-                  ? 'border-violet-500/40 bg-violet-500/20 text-violet-300 shadow-neon-violet'
-                  : 'border-white/10 bg-white/5 text-slate-400 hover:border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-400'
-              } ${geoStatus === 'loading' ? 'cursor-wait opacity-60' : ''}`}
-            >
-              <LocateFixed size={14} className={geoStatus === 'loading' ? 'animate-spin' : ''} />
-              {geoStatus === 'loading' ? 'Locating…' : nearMeActive ? 'Near Me ✓' : 'Near Me'}
-              {geoStatus === 'ip-fallback' && nearMeActive && (
-                <span className="rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-400 border border-amber-500/20">approx</span>
-              )}
-            </button>
-
-            {/* Radius picker */}
-            <AnimatePresence>
-              {nearMeActive && (
-                <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} className="relative">
-                  <button
-                    onClick={() => setShowRadiusPicker((p) => !p)}
-                    className="flex items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2.5 text-sm font-semibold text-violet-400 transition hover:bg-violet-500/20"
-                  >
-                    <SlidersHorizontal size={13} />
-                    {nearMeRadius} km
-                  </button>
-                  {showRadiusPicker && (
-                    <div className="absolute left-0 top-full z-30 mt-1.5 min-w-[100px] overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-[0_16px_48px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
-                      {RADIUS_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.value}
-                          onClick={() => { setNearMeRadius(opt.value); setShowRadiusPicker(false); }}
-                          className={`w-full px-4 py-2.5 text-left text-sm transition hover:bg-white/8 ${
-                            nearMeRadius === opt.value ? 'font-bold text-violet-400' : 'text-slate-400'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Active/Expired toggle */}
-            <button
-              onClick={() => setShowExpired((p) => !p)}
-              className={`ml-auto flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
-                showExpired
-                  ? 'border-slate-500/30 bg-slate-500/20 text-slate-300'
-                  : 'border-white/10 bg-white/5 text-slate-500 hover:border-white/20 hover:text-slate-300'
-              }`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${showExpired ? 'bg-amber-400' : 'bg-emerald-400 shadow-neon-emerald'}`} />
-              {showExpired ? 'Showing all' : 'Active only'}
-            </button>
-          </div>
-
-          {/* Geo alerts */}
-          <AnimatePresence>
-            {geoStatus === 'ip-fallback' && nearMeActive && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                className="mb-3 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2.5 text-xs text-amber-400"
-              >
-                <Info size={12} className="mt-0.5 shrink-0" />
-                Using approximate location (GPS unavailable). Results may include deals slightly outside your area.
-              </motion.div>
-            )}
-            {geoStatus === 'denied' && !nearMeActive && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                className="mb-3 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2.5 text-xs text-rose-400 space-y-1"
-              >
-                <p className="flex items-center gap-1.5 font-semibold"><AlertCircle size={12} /> Location permission denied</p>
-                <p>Mac: System Settings → Privacy → Location Services → enable your browser.</p>
-                <p>Chrome: Click lock icon → Site settings → Location → Allow.</p>
-              </motion.div>
-            )}
-            {geoStatus === 'error' && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                className="mb-3 flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2.5 text-xs text-rose-400"
-              >
-                <AlertCircle size={12} /> Could not detect location. Try again or use search.
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Category pills */}
-          <div className="mb-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* ── Category Bubbles (Swiggy-style icon grid) ── */}
+      <div className="relative -mx-4 mb-5">
+        <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-3 px-4 pb-1" style={{ width: 'max-content' }}>
             {CATEGORY_FILTERS.map((cat) => {
-              const meta = cat.value === 'all' ? null : getCategoryMeta(cat.value);
+              const meta = cat.value === 'all' ? { emoji: '🌟' } : getCategoryMeta(cat.value);
               const active = selectedCategory === cat.value;
               return (
                 <button
                   key={cat.value}
                   onClick={() => setSelectedCategory(cat.value)}
-                  className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-                    active
-                      ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-neon-violet scale-105'
-                      : 'border border-white/8 bg-white/5 text-slate-400 hover:border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-400'
-                  }`}
+                  className="flex shrink-0 flex-col items-center gap-1.5 select-none transition-transform duration-100 active:scale-90"
                 >
-                  {meta && <span className="text-sm leading-none">{meta.emoji}</span>}
-                  {cat.label}
+                  <div className={`flex h-[60px] w-[60px] items-center justify-center rounded-[18px] text-2xl transition-all duration-200 ${
+                    active
+                      ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-[0_4px_16px_rgba(139,92,246,0.55)] scale-110'
+                      : 'border border-white/8 bg-slate-800/80'
+                  }`}>
+                    {meta?.emoji || '🌟'}
+                  </div>
+                  <span className={`w-[60px] truncate text-center text-[11px] font-bold transition-colors duration-200 ${
+                    active ? 'text-violet-400' : 'text-slate-500'
+                  }`}>
+                    {cat.label}
+                  </span>
                 </button>
               );
             })}
           </div>
-
-          {/* Feed mode tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {FEED_MODES.map((mode) => (
-              <button
-                key={mode.key}
-                onClick={() => setFeedMode(mode.key)}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-all duration-200 ${
-                  feedMode === mode.key
-                    ? 'border-white/20 bg-white/15 text-white shadow-inner-top'
-                    : 'border-white/8 bg-transparent text-slate-500 hover:border-white/15 hover:text-slate-300'
-                }`}
-              >
-                <mode.icon size={13} /> {mode.label}
-              </button>
-            ))}
-          </div>
         </div>
+        {/* right-fade scroll hint */}
+        <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-slate-950 to-transparent" />
+      </div>
 
-        {/* Ending today urgency strip */}
-        {dealsEndingToday > 0 && !isFiltering && (
-          <motion.button
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            onClick={() => setFeedMode('ending-soon')}
-            className="mb-5 flex w-full items-center gap-3 overflow-hidden rounded-xl border border-rose-500/25 bg-gradient-to-r from-rose-950/60 to-amber-950/40 px-4 py-3 text-left transition-all duration-200 hover:border-rose-500/40 hover:bg-rose-500/5"
+      {/* Network error */}
+      {networkIssue && (
+        <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-400">
+          <WifiOff size={13} className="shrink-0" />
+          {networkIssue}
+          <button onClick={fetchDeals} className="ml-auto font-semibold text-amber-300 underline">Retry</button>
+        </div>
+      )}
+
+      {/* Geo alerts */}
+      <AnimatePresence>
+        {geoStatus === 'ip-fallback' && nearMeActive && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            className="mb-3 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2.5 text-xs text-amber-400"
           >
-            <span className="animate-pulse text-xl leading-none">🔥</span>
-            <div className="min-w-0 flex-1">
-              <span className="text-sm font-semibold text-white">
-                <span className="text-rose-400">{dealsEndingToday} deal{dealsEndingToday !== 1 ? 's' : ''}</span> ending today
-              </span>
-              <span className="ml-2 text-xs text-slate-500">Don&apos;t miss out</span>
-            </div>
-            <span className="shrink-0 text-xs font-bold text-rose-400">View all →</span>
-          </motion.button>
+            <Info size={12} className="mt-0.5 shrink-0" />
+            Using approximate location (GPS unavailable). Results may include deals slightly outside your area.
+          </motion.div>
         )}
+        {geoStatus === 'denied' && !nearMeActive && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            className="mb-3 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2.5 text-xs text-rose-400 space-y-1"
+          >
+            <p className="flex items-center gap-1.5 font-semibold"><AlertCircle size={12} /> Location permission denied</p>
+            <p>Chrome: Click lock icon → Site settings → Location → Allow.</p>
+          </motion.div>
+        )}
+        {geoStatus === 'error' && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            className="mb-3 flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2.5 text-xs text-rose-400"
+          >
+            <AlertCircle size={12} /> Could not detect location. Try again or use search.
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* ── Spotlight — desktop only ── */}
-        {spotlightDeal && !isFiltering && (
-          <Link href={`/deal/${spotlightDeal.id}`} className="mb-5 hidden lg:block">
-            <div className="group relative overflow-hidden rounded-2xl border border-violet-500/20 bg-slate-900/80 p-4 transition-all duration-300 hover:border-violet-500/40 hover:shadow-card-hover md:p-5">
-              <div className="absolute inset-0 bg-gradient-to-r from-violet-600/5 via-transparent to-fuchsia-600/5" />
-              <div className="relative flex items-center justify-between gap-4">
-                <div className="min-w-0 flex items-center gap-3">
-                  <span className="shrink-0 text-3xl">{getCategoryMeta(spotlightDeal.category).emoji}</span>
-                  <div className="min-w-0">
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-violet-400">✦ Spotlight Deal</p>
-                    <p className="line-clamp-1 text-base font-bold text-white md:text-lg">{spotlightDeal.title}</p>
-                    <p className="mt-1 truncate text-xs text-slate-500">
-                      {spotlightDeal.area || spotlightDeal.city || 'Location not set'} · {getCategoryLabel(spotlightDeal.category)}
+      {/* ── Discovery strips (hidden when filtering) ── */}
+      {!isFiltering && (
+        <>
+          {/* Featured Deal — full-width hero card */}
+          {hotDeals[0] && (
+            <div className="mb-5">
+              <Link
+                href={`/deal/${hotDeals[0].id}`}
+                className="block overflow-hidden rounded-2xl border border-white/8 active:opacity-90 active:scale-[0.99] transition-all duration-150"
+              >
+                <div className="relative h-52 bg-slate-800">
+                  {hotDeals[0].image ? (
+                    <img src={hotDeals[0].image} alt={hotDeals[0].title} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-violet-900/80 to-fuchsia-900/80 text-8xl">
+                      {getCategoryMeta(hotDeals[0].category).emoji}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                  <div className="absolute left-3 top-3 flex items-center gap-1 rounded-lg bg-rose-500/90 backdrop-blur-sm px-2.5 py-1 text-[11px] font-extrabold text-white">
+                    🔥 Featured
+                  </div>
+                  {discountPct(hotDeals[0]) !== null && (
+                    <div className="absolute right-3 top-3 rounded-lg bg-emerald-500/90 backdrop-blur-sm px-2.5 py-1 text-[11px] font-extrabold text-white">
+                      {discountPct(hotDeals[0])}% OFF
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-violet-300">
+                      {getCategoryLabel(hotDeals[0].category)}{hotDeals[0].area || hotDeals[0].city ? ` · ${hotDeals[0].area || hotDeals[0].city}` : ''}
                     </p>
+                    <p className="text-lg font-black leading-snug text-white line-clamp-2">{hotDeals[0].title}</p>
+                    <div className="mt-2 flex items-center gap-3">
+                      {hotDeals[0].offer_price && (
+                        <span className="text-sm font-extrabold text-yellow-300">{hotDeals[0].offer_price}</span>
+                      )}
+                      {hotDeals[0].original_price && (
+                        <span className="text-xs text-slate-400 line-through">{hotDeals[0].original_price}</span>
+                      )}
+                      {(hotDeals[0].rating || 0) > 0 && (
+                        <span className="ml-auto text-sm font-bold text-amber-400">★ {hotDeals[0].rating?.toFixed(1)}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-sm font-bold text-amber-400">★ {spotlightDeal.rating?.toFixed(1) || '0.0'}</p>
-                  <p className="text-xs text-slate-600">{spotlightDeal.rating_count || 0} reviews</p>
-                  <ChevronRight size={16} className="ml-auto mt-1 text-slate-600 transition group-hover:text-violet-400" />
-                </div>
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {/* ── Deal count + view toggle ── */}
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-xs text-slate-500 md:text-sm">
-            <span className="font-bold text-slate-200">{displayedDeals.length}</span> deals
-            {nearMeActive && <span className="text-slate-600"> · within {nearMeRadius} km</span>}
-            {searchQuery && <span className="text-slate-600"> · &quot;{searchQuery}&quot;</span>}
-            {!showExpired && <span className="text-slate-600"> · active only</span>}
-          </p>
-          <div className="flex items-center gap-2">
-            {isFiltering && (
-              <button onClick={clearAll} className="text-xs font-semibold text-violet-400 transition hover:text-violet-300">
-                Clear all
-              </button>
-            )}
-            <div className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/5 p-1">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${viewMode === 'list' ? 'bg-white/15 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                <List size={13} />
-              </button>
-              <button
-                onClick={() => setViewMode('map')}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${viewMode === 'map' ? 'bg-white/15 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                <MapPinned size={13} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Deals grid / Map / Empty ── */}
-        {viewMode === 'map' ? (
-          <div className="mb-6 overflow-hidden rounded-2xl border border-white/8 bg-slate-900/80">
-            <div className="border-b border-white/8 p-4">
-              <p className="font-bold text-white">Map Discovery</p>
-              <p className="mt-0.5 text-xs text-slate-500">Explore nearby deals visually on an interactive map.</p>
-            </div>
-            <div className="p-4">
-              <Link
-                href="/map"
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2.5 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90"
-              >
-                <MapPinned size={14} /> Open Full Map
               </Link>
             </div>
+          )}
+
+          {/* 🔥 Hot Today */}
+          {hotDeals.length > 1 && <StripSection title="🔥 Hot Today" deals={hotDeals.slice(1, 11)} />}
+
+          {/* ⭐ Top Rated */}
+          {topRatedStrip.length > 0 && <StripSection title="⭐ Top Rated" deals={topRatedStrip} />}
+
+          {/* ⏰ Ending Soon */}
+          {endingSoonStrip.length > 0 && <StripSection title="⏰ Ending Soon" deals={endingSoonStrip} urgency />}
+
+          {/* Ending today urgency banner */}
+          {dealsEndingToday > 0 && (
+            <motion.button
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => setFeedMode('ending-soon')}
+              className="mb-5 flex w-full items-center gap-3 overflow-hidden rounded-xl border border-rose-500/25 bg-gradient-to-r from-rose-950/60 to-amber-950/40 px-4 py-3 text-left"
+            >
+              <span className="animate-pulse text-xl leading-none">🔥</span>
+              <span className="flex-1 text-sm font-semibold text-white">
+                <span className="text-rose-400">{dealsEndingToday} deal{dealsEndingToday !== 1 ? 's' : ''}</span> ending today
+              </span>
+              <span className="shrink-0 text-xs font-bold text-rose-400">View all →</span>
+            </motion.button>
+          )}
+
+          {/* 👀 Recently Viewed */}
+          {recentDeals.length > 0 && <StripSection title="👀 Recently Viewed" deals={recentDeals} />}
+        </>
+      )}
+
+      {/* ── All Deals heading ── */}
+      <div className="mb-3 mt-6 flex items-center gap-2">
+        <div className="h-4 w-1 rounded-full bg-gradient-to-b from-violet-500 to-fuchsia-500" />
+        <h2 className="text-base font-extrabold text-white">All Deals</h2>
+        {nearMeActive && <span className="text-xs text-slate-600">· within {nearMeRadius} km</span>}
+        {searchQuery && <span className="text-xs text-slate-600">· &quot;{searchQuery}&quot;</span>}
+        <span className="ml-auto text-xs font-semibold text-slate-400">{displayedDeals.length} results</span>
+      </div>
+
+      {/* Feed mode tabs */}
+      <div className="mb-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {FEED_MODES.map((mode) => (
+          <button
+            key={mode.key}
+            onClick={() => setFeedMode(mode.key)}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-all duration-200 ${
+              feedMode === mode.key
+                ? 'border-white/20 bg-white/15 text-white'
+                : 'border-white/8 bg-transparent text-slate-500 hover:border-white/15 hover:text-slate-300'
+            }`}
+          >
+            <mode.icon size={13} /> {mode.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Controls row */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <AnimatePresence>
+          {nearMeActive && (
+            <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} className="relative">
+              <button
+                onClick={() => setShowRadiusPicker((p) => !p)}
+                className="flex items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-sm font-semibold text-violet-400 transition hover:bg-violet-500/20"
+              >
+                <SlidersHorizontal size={13} />
+                {nearMeRadius} km
+              </button>
+              {showRadiusPicker && (
+                <div className="absolute left-0 top-full z-30 mt-1.5 min-w-[100px] overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-[0_16px_48px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
+                  {RADIUS_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setNearMeRadius(opt.value); setShowRadiusPicker(false); }}
+                      className={`w-full px-4 py-2.5 text-left text-sm transition hover:bg-white/8 ${
+                        nearMeRadius === opt.value ? 'font-bold text-violet-400' : 'text-slate-400'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <button
+          onClick={() => setShowExpired((p) => !p)}
+          className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-all duration-200 ${
+            showExpired
+              ? 'border-slate-500/30 bg-slate-500/20 text-slate-300'
+              : 'border-white/10 bg-white/5 text-slate-500 hover:border-white/20 hover:text-slate-300'
+          }`}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${showExpired ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+          {showExpired ? 'Showing all' : 'Active only'}
+        </button>
+
+        {isFiltering && (
+          <button onClick={clearAll} className="text-sm font-semibold text-violet-400 transition hover:text-violet-300">
+            Clear all
+          </button>
+        )}
+
+        <div className="ml-auto flex items-center gap-1 rounded-xl border border-white/8 bg-white/5 p-1">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`rounded-lg px-2.5 py-1.5 transition-all ${viewMode === 'list' ? 'bg-white/15 text-white' : 'text-slate-500'}`}
+          >
+            <List size={13} />
+          </button>
+          <button
+            onClick={() => setViewMode('map')}
+            className={`rounded-lg px-2.5 py-1.5 transition-all ${viewMode === 'map' ? 'bg-white/15 text-white' : 'text-slate-500'}`}
+          >
+            <MapPinned size={13} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Deals / Map / Empty ── */}
+      {viewMode === 'map' ? (
+        <div className="mb-6 overflow-hidden rounded-2xl border border-white/8 bg-slate-900/80">
+          <div className="border-b border-white/8 p-4">
+            <p className="font-bold text-white">Map Discovery</p>
+            <p className="mt-0.5 text-xs text-slate-500">Explore nearby deals on an interactive map.</p>
           </div>
-        ) : displayedDeals.length === 0 ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-24 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/8 bg-slate-900/80">
-              <Tag size={28} className="text-slate-600" />
-            </div>
-            <p className="text-lg font-bold text-slate-300">No deals found</p>
-            <p className="mt-1 text-sm text-slate-600">
-              {nearMeActive
-                ? `No deals within ${nearMeRadius} km — try increasing the radius.`
-                : 'Try another filter or search term.'}
-            </p>
-          </motion.div>
-        ) : (
-          <motion.div layout className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
-            <AnimatePresence>
-              {displayedDeals.map((deal) => (
-                <motion.div
-                  key={deal.id}
-                  layout
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.97 }}
-                  transition={{ duration: 0.22 }}
-                >
-                  <DealCard deal={deal} />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
+          <div className="p-4">
+            <Link
+              href="/map"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+            >
+              <MapPinned size={14} /> Open Full Map
+            </Link>
+          </div>
+        </div>
+      ) : displayedDeals.length === 0 ? (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-24 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/8 bg-slate-900/80">
+            <Tag size={28} className="text-slate-600" />
+          </div>
+          <p className="text-lg font-bold text-slate-300">No deals found</p>
+          <p className="mt-1 text-sm text-slate-600">
+            {nearMeActive
+              ? `No deals within ${nearMeRadius} km — try increasing the radius.`
+              : 'Try another filter or search term.'}
+          </p>
+        </motion.div>
+      ) : (
+        <motion.div layout className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
+          <AnimatePresence>
+            {displayedDeals.map((deal) => (
+              <motion.div
+                key={deal.id}
+                layout
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={{ duration: 0.22 }}
+              >
+                <DealCard deal={deal} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
 
-        {/* ── Sections ── */}
-        {!isFiltering && recentDeals.length > 0 && (
-          <section className="mt-10">
-            <div className="mb-4 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-gradient-to-b from-violet-500 to-fuchsia-500" />
-              <h2 className="text-sm font-bold text-white md:text-base">Recently Viewed</h2>
+      {/* ── Business CTA (bottom) ── */}
+      {!isBusiness && (
+        <div className="mt-10">
+          <Link
+            href="/login"
+            className="flex items-center gap-4 rounded-2xl border border-amber-500/25 bg-gradient-to-r from-amber-950/60 via-slate-900/80 to-slate-900/80 px-5 py-4 active:opacity-70 transition-opacity"
+          >
+            <span className="text-2xl leading-none">🏪</span>
+            <div>
+              <p className="text-sm font-extrabold text-amber-400">List your business deals free</p>
+              <p className="text-xs text-slate-500">Join local businesses on LocalDeals →</p>
             </div>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-              {recentDeals.map((deal) => <DealCard key={`recent-${deal.id}`} deal={deal} />)}
-            </div>
-          </section>
-        )}
+            <ChevronRight size={16} className="ml-auto shrink-0 text-amber-500/60" />
+          </Link>
+        </div>
+      )}
 
-        {!isFiltering && communityPicks.length > 0 && (
-          <section className="mt-10">
-            <div className="mb-4 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-gradient-to-b from-emerald-400 to-teal-500" />
-              <h2 className="text-sm font-bold text-white md:text-base">Community Picks</h2>
-            </div>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-              {communityPicks.map((deal) => <DealCard key={`pick-${deal.id}`} deal={deal} />)}
-            </div>
-          </section>
-        )}
-
-        {!isFiltering && endingSoonDeals.length > 0 && (
-          <section className="mt-10">
-            <div className="mb-4 flex items-center gap-2">
-              <div className="h-4 w-1 rounded-full bg-gradient-to-b from-rose-500 to-amber-500" />
-              <h2 className="text-sm font-bold text-white md:text-base">Ending Soon</h2>
-            </div>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {endingSoonDeals.map((deal) => {
-                const meta = getCategoryMeta(deal.category);
-                return (
-                  <Link
-                    key={`soon-${deal.id}`}
-                    href={`/deal/${deal.id}`}
-                    className="group rounded-xl border border-rose-500/20 bg-rose-500/5 p-3.5 transition-all duration-200 hover:border-rose-500/40 hover:bg-rose-500/10"
-                  >
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="text-lg">{meta.emoji}</span>
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-rose-400/70">{getCategoryLabel(deal.category)}</span>
-                    </div>
-                    <p className="line-clamp-2 text-sm font-semibold text-white group-hover:text-rose-300">{deal.title}</p>
-                    <p className="mt-1.5 text-xs font-medium text-rose-400">{getUrgencyLabel(deal.valid_till_date)}</p>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
-      </motion.div>
     </main>
+  );
+}
+
+function discountPct(deal: Deal): number | null {
+  if (!deal.original_price || !deal.offer_price) return null;
+  const orig = parseFloat(String(deal.original_price).replace(/[^0-9.]/g, ''));
+  const offer = parseFloat(String(deal.offer_price).replace(/[^0-9.]/g, ''));
+  if (!orig || !offer || offer >= orig) return null;
+  return Math.round(((orig - offer) / orig) * 100);
+}
+
+function MiniCard({ deal }: { deal: Deal }) {
+  const pct = discountPct(deal);
+  return (
+    <Link
+      href={`/deal/${deal.id}`}
+      className="flex w-40 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/8 bg-slate-900 active:scale-95 active:opacity-90 transition-all duration-150 select-none"
+    >
+      <div className="relative h-24 overflow-hidden bg-slate-800">
+        {deal.image ? (
+          <img src={deal.image} alt={deal.title} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center text-4xl">
+            {getCategoryMeta(deal.category).emoji}
+          </div>
+        )}
+        {pct !== null && (
+          <span className="absolute left-1.5 top-1.5 rounded-md bg-rose-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white leading-none">
+            -{pct}%
+          </span>
+        )}
+        {deal.is_boosted && (
+          <span className="absolute right-1.5 top-1.5 rounded-md bg-violet-500/90 px-1.5 py-0.5 text-[10px] font-extrabold text-white leading-none">
+            ✦
+          </span>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col p-2.5">
+        <p className="line-clamp-2 text-[12px] font-bold leading-snug text-white">{deal.title}</p>
+        <div className="mt-auto space-y-0.5 pt-2">
+          {deal.offer_price && (
+            <p className="text-[12px] font-extrabold text-violet-400">{deal.offer_price}</p>
+          )}
+          {(deal.rating || 0) > 0 && (
+            <p className="text-[11px] font-semibold text-amber-400">★ {deal.rating?.toFixed(1)}</p>
+          )}
+          <p className="truncate text-[11px] text-slate-600">{deal.area || deal.city || ''}</p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function StripSection({ title, deals, urgency = false }: { title: string; deals: Deal[]; urgency?: boolean }) {
+  if (!deals.length) return null;
+  return (
+    <section className="mb-6">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-[15px] font-extrabold text-white">{title}</h2>
+        <span className="text-xs text-slate-600">{deals.length} deals</span>
+      </div>
+      <div className="relative -mx-4">
+        <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-3 px-4" style={{ width: 'max-content' }}>
+            {deals.map((deal) => (
+              <MiniCard key={deal.id} deal={deal} />
+            ))}
+            <div className="w-2 shrink-0" />
+          </div>
+        </div>
+        <div className="pointer-events-none absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-slate-950 to-transparent" />
+      </div>
+      {urgency && (
+        <p className="mt-2 text-[11px] text-rose-400/70">⏳ Grab these before they&apos;re gone</p>
+      )}
+    </section>
   );
 }
