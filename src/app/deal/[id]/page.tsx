@@ -5,12 +5,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/app/lib/supabase';
-import { getCategoryMeta, getCategoryLabel } from '@/app/lib/categories';
+import { getCategoryMeta, getCategoryLabel, normalizeCategory } from '@/app/lib/categories';
 import {
   MapPin, Navigation, Star, ShieldCheck, Clock3, Copy, Phone,
   MessageCircleMore, ChevronLeft, ChevronRight, Flag, Store, Check, ArrowLeft,
+  Bookmark, BookmarkCheck, Share2,
 } from 'lucide-react';
-import { formatOfferLine, getUrgencyLabel } from '@/app/lib/deal-utils';
+import { formatOfferLine, getUrgencyLabel, haversineKm, formatDistance } from '@/app/lib/deal-utils';
+import MiniDealCard from '@/app/components/MiniDealCard';
+import { trackEvent } from '@/app/lib/analytics';
 
 type Deal = {
   id: number;
@@ -73,6 +76,113 @@ export default function DealDetailPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [claiming, setClaiming] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [savedId, setSavedId] = useState<number | null>(null);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [similarDeals, setSimilarDeals] = useState<Deal[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem('ld_last_coords');
+      if (raw) {
+        const parsed = JSON.parse(raw) as { lat?: number; lng?: number };
+        if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setCoords({ lat: parsed.lat, lng: parsed.lng });
+        }
+      }
+    } catch { /* best-effort */ }
+  }, []);
+
+  useEffect(() => {
+    if (!userId || !dealId) { setSaved(false); setSavedId(null); return; }
+    supabase
+      .from('saved_deals')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('deal_id', dealId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) { setSaved(true); setSavedId(data.id); }
+        else { setSaved(false); setSavedId(null); }
+      });
+  }, [userId, dealId]);
+
+  useEffect(() => {
+    if (!deal?.category || !dealId) { setSimilarDeals([]); return; }
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase
+        .from('deals')
+        .select('*')
+        .neq('id', dealId)
+        .order('created_at', { ascending: false })
+        .limit(60);
+      if (cancelled || !data) return;
+      const today = new Date().toISOString().split('T')[0];
+      const targetCat = normalizeCategory(deal.category);
+      const candidates = (data as Deal[]).filter((d) =>
+        normalizeCategory(d.category) === targetCat &&
+        (!d.status || d.status === 'active') &&
+        (!d.valid_till_date || d.valid_till_date >= today)
+      );
+      if (coords) {
+        candidates.sort((a, b) => {
+          const da = a.latitude != null && a.longitude != null
+            ? haversineKm(coords.lat, coords.lng, a.latitude, a.longitude) : Number.MAX_VALUE;
+          const db = b.latitude != null && b.longitude != null
+            ? haversineKm(coords.lat, coords.lng, b.latitude, b.longitude) : Number.MAX_VALUE;
+          return da - db;
+        });
+      } else {
+        candidates.sort((a, b) => ((b.clicks || 0) + (b.views || 0)) - ((a.clicks || 0) + (a.views || 0)));
+      }
+      setSimilarDeals(candidates.slice(0, 8));
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [deal?.category, dealId, coords]);
+
+  const toggleSave = async () => {
+    if (!dealId || saveLoading) return;
+    if (!userId) { router.push(`/user/login?next=/deal/${dealId}`); return; }
+    setSaveLoading(true);
+    try {
+      if (saved && savedId) {
+        await supabase.from('saved_deals').delete().eq('id', savedId);
+        setSaved(false); setSavedId(null);
+        void trackEvent('deal_unsaved', { deal_id: dealId, surface: 'deal_detail' });
+      } else {
+        const { data, error } = await supabase
+          .from('saved_deals')
+          .insert({ user_id: userId, deal_id: dealId })
+          .select('id')
+          .single();
+        if (!error && data) {
+          setSaved(true); setSavedId(data.id);
+          void trackEvent('deal_saved', { deal_id: dealId, surface: 'deal_detail' });
+        }
+      }
+    } finally { setSaveLoading(false); }
+  };
+
+  const shareDeal = async () => {
+    if (!deal) return;
+    const url = `${window.location.origin}/deal/${deal.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: deal.title, text: `${deal.title} on LocalDeals`, url });
+        void trackEvent('deal_shared', { deal_id: deal.id, channel: 'native', surface: 'deal_detail' });
+        return;
+      } catch { /* fall through to clipboard */ }
+    }
+    await navigator.clipboard.writeText(url);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 1500);
+    void trackEvent('deal_shared', { deal_id: deal.id, channel: 'copy_fallback', surface: 'deal_detail' });
+  };
 
   const isAbortError = (error: unknown) => {
     if (error instanceof DOMException && error.name === 'AbortError') return true;
@@ -395,6 +505,23 @@ export default function DealDetailPage() {
               >
                 <Navigation size={14} /> Get Directions
               </button>
+              <button
+                onClick={toggleSave}
+                disabled={saveLoading}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 ${
+                  saved
+                    ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                    : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                }`}
+              >
+                {saved ? <><BookmarkCheck size={14} /> Saved</> : <><Bookmark size={14} /> Save</>}
+              </button>
+              <button
+                onClick={shareDeal}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10 transition"
+              >
+                <Share2 size={14} /> {shareCopied ? 'Link copied!' : 'Share'}
+              </button>
               {deal.contact_whatsapp && (
                 <a
                   href={`https://wa.me/${deal.contact_whatsapp.replace(/\D/g, '')}`}
@@ -419,6 +546,11 @@ export default function DealDetailPage() {
             <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400">
               <span className="inline-flex items-center gap-1.5">
                 <MapPin size={13} className="text-violet-400" />
+                {coords && deal.latitude != null && deal.longitude != null && (
+                  <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-px text-[11px] font-bold text-emerald-400">
+                    {formatDistance(haversineKm(coords.lat, coords.lng, deal.latitude, deal.longitude))}
+                  </span>
+                )}
                 {[deal.area, deal.city].filter(Boolean).join(', ') || 'Location not set'}
               </span>
               <span>👁 {deal.views || 0} views</span>
@@ -465,6 +597,29 @@ export default function DealDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* More like this nearby */}
+        {similarDeals.length > 0 && (
+          <section className="mt-6">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-[15px] font-extrabold text-white">
+                {catMeta.emoji} More {catLabel} deals{coords ? ' near you' : ''}
+              </h2>
+              <span className="text-xs text-slate-600">{similarDeals.length} deals</span>
+            </div>
+            <div className="relative -mx-3 md:-mx-6">
+              <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex gap-3 px-3 md:px-6" style={{ width: 'max-content' }}>
+                  {similarDeals.map((d) => (
+                    <MiniDealCard key={d.id} deal={d} userLat={coords?.lat} userLng={coords?.lng} />
+                  ))}
+                  <div className="w-2 shrink-0" />
+                </div>
+              </div>
+              <div className="pointer-events-none absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-slate-950 to-transparent" />
+            </div>
+          </section>
+        )}
 
         {/* Write review */}
         <div className="mt-4 rounded-2xl border border-white/8 bg-slate-900/80 p-5 md:p-7">

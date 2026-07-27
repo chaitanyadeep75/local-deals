@@ -9,7 +9,8 @@ import {
   Share2, ChevronLeft, ChevronRight, Flame, Zap, Sparkles, Rocket, X,
 } from 'lucide-react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { formatOfferLine, getUrgencyLabel } from '@/app/lib/deal-utils';
+import { formatOfferLine, getUrgencyLabel, haversineKm, formatDistance, getDiscountPct } from '@/app/lib/deal-utils';
+import { normalizeCategory } from '@/app/lib/categories';
 import { trackEvent } from '@/app/lib/analytics';
 
 type Deal = {
@@ -56,14 +57,6 @@ function fmtNum(n: number): string {
   return String(n);
 }
 
-function getDiscountPct(offerPrice?: string | null, originalPrice?: string | null): number | null {
-  if (!offerPrice || !originalPrice) return null;
-  const offer = parseFloat(offerPrice.replace(/[^\d.]/g, ''));
-  const orig = parseFloat(originalPrice.replace(/[^\d.]/g, ''));
-  if (!orig || !offer || offer >= orig) return null;
-  return Math.round(((orig - offer) / orig) * 100);
-}
-
 type HeatBadge = { label: string; className: string; icon: React.ReactNode };
 
 function getHeatBadge(deal: Deal): HeatBadge | null {
@@ -102,7 +95,12 @@ function getHeatBadge(deal: Deal): HeatBadge | null {
   return null;
 }
 
-export default function DealCard({ deal }: { deal: Deal }) {
+export default function DealCard({ deal, userLat, userLng, onUnsave }: {
+  deal: Deal;
+  userLat?: number | null;
+  userLng?: number | null;
+  onUnsave?: (dealId: number) => void;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const [submitting, setSubmitting] = useState(false);
@@ -122,6 +120,10 @@ export default function DealCard({ deal }: { deal: Deal }) {
 
   const canNavigate = !!(deal.latitude && deal.longitude);
   const label = locationLabel(deal);
+  const distanceLabel =
+    userLat != null && userLng != null && deal.latitude != null && deal.longitude != null
+      ? formatDistance(haversineKm(userLat, userLng, deal.latitude, deal.longitude))
+      : null;
   const urgency = getUrgencyLabel(deal.valid_till_date);
   const offerLine = formatOfferLine(deal.offer_price, deal.original_price, deal.discount_label);
   const imageGallery = useMemo(() => {
@@ -211,6 +213,7 @@ export default function DealCard({ deal }: { deal: Deal }) {
         await supabase.from('saved_deals').delete().eq('id', savedId);
         setSaved(false); setSavedId(null);
         void trackEvent('deal_unsaved', { deal_id: deal.id });
+        onUnsave?.(deal.id);
       } else {
         const { data, error } = await supabase
           .from('saved_deals')
@@ -222,7 +225,7 @@ export default function DealCard({ deal }: { deal: Deal }) {
           if (typeof window !== 'undefined' && deal.category) {
             const raw = window.localStorage.getItem('ld_saved_categories');
             const prev = raw ? (JSON.parse(raw) as string[]) : [];
-            const next = Array.from(new Set([deal.category.toLowerCase(), ...prev])).slice(0, 12);
+            const next = Array.from(new Set([normalizeCategory(deal.category), ...prev])).slice(0, 12);
             window.localStorage.setItem('ld_saved_categories', JSON.stringify(next));
           }
           void trackEvent('deal_saved', { deal_id: deal.id });
@@ -476,6 +479,11 @@ export default function DealCard({ deal }: { deal: Deal }) {
           {/* Location */}
           <div className="mt-2.5 flex items-center gap-1.5">
             <MapPin size={12} className={canNavigate ? 'shrink-0 text-violet-400' : 'shrink-0 text-slate-700'} />
+            {distanceLabel && (
+              <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-px text-[10px] font-bold text-emerald-400">
+                {distanceLabel}
+              </span>
+            )}
             <p className={`truncate text-xs ${canNavigate ? 'text-slate-400' : 'italic text-slate-600'}`}>{label}</p>
           </div>
 

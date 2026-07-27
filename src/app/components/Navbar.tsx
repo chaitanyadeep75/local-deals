@@ -95,7 +95,7 @@ export default function Navbar() {
   const showBusinessNav = isBusiness || isBusinessView;
   const isHome = pathname === '/';
   const isMap = pathname?.startsWith('/map');
-  const isSaved = pathname?.startsWith('/user/profile');
+  const isSaved = pathname?.startsWith('/saved');
   const isDash = pathname?.startsWith('/business/dashboard');
 
   const NavLink = ({ href, icon: Icon, label, active }: { href: string; icon: React.ComponentType<{size?: number}>; label: string; active: boolean }) => (
@@ -154,7 +154,7 @@ export default function Navbar() {
             <NavLink href="/admin" icon={Shield} label="Admin" active={!!pathname?.startsWith('/admin')} />
           )}
           {user && !showBusinessNav && (
-            <NavLink href="/user/profile" icon={Bookmark} label="Saved" active={isSaved} />
+            <NavLink href="/saved" icon={Bookmark} label="Saved" active={isSaved} />
           )}
 
           {/* Auth section */}
@@ -252,14 +252,24 @@ export default function Navbar() {
                         My Dashboard
                       </Link>
                     ) : (
-                      <Link
-                        href="/user/profile"
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition-all duration-150 hover:bg-white/8 hover:text-white"
-                      >
-                        <Bookmark size={15} className="text-emerald-400" />
-                        My Saved Deals
-                      </Link>
+                      <>
+                        <Link
+                          href="/saved"
+                          onClick={() => setOpen(false)}
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition-all duration-150 hover:bg-white/8 hover:text-white"
+                        >
+                          <Bookmark size={15} className="text-emerald-400" />
+                          My Saved Deals
+                        </Link>
+                        <Link
+                          href="/user/profile"
+                          onClick={() => setOpen(false)}
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition-all duration-150 hover:bg-white/8 hover:text-white"
+                        >
+                          <User size={15} className="text-violet-400" />
+                          Profile & Settings
+                        </Link>
+                      </>
                     )}
                     {isAdmin && (
                       <Link

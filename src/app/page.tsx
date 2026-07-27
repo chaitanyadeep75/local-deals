@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import DealCard from '@/app/components/DealCard';
-import { CATEGORY_FILTERS, categoryMatchesFilter, getCategoryLabel, getCategoryMeta } from '@/app/lib/categories';
+import { CATEGORY_FILTERS, categoryMatchesFilter, getCategoryLabel, getCategoryMeta, normalizeCategory } from '@/app/lib/categories';
+import { haversineKm, getDiscountPct } from '@/app/lib/deal-utils';
+import InterestPicker, { ONBOARDED_KEY, SAVED_CATEGORIES_KEY } from '@/app/components/InterestPicker';
+import MiniDealCard from '@/app/components/MiniDealCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -66,16 +69,20 @@ const RADIUS_OPTIONS = [
   { label: '10 km', value: 10 },
 ];
 
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-    Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+const LAST_COORDS_KEY = 'ld_last_coords';
+
+function readCachedCoords(): { lat: number; lng: number } | null {
+  try {
+    const raw = window.localStorage.getItem(LAST_COORDS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { lat?: number; lng?: number };
+    if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number') return { lat: parsed.lat, lng: parsed.lng };
+    return null;
+  } catch { return null; }
+}
+
+function cacheCoords(lat: number, lng: number) {
+  try { window.localStorage.setItem(LAST_COORDS_KEY, JSON.stringify({ lat, lng })); } catch { /* best-effort */ }
 }
 
 async function getLocationByIP(): Promise<{ lat: number; lng: number } | null> {
@@ -107,6 +114,8 @@ export default function HomePage() {
   const [networkIssue, setNetworkIssue] = useState<string | null>(null);
   const [recentDeals, setRecentDeals] = useState<Deal[]>([]);
   const [isBusiness, setIsBusiness] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
@@ -134,10 +143,12 @@ export default function HomePage() {
         ? 'Network issue while loading deals. Please retry.'
         : 'Could not load deals right now. Please retry.');
       setAllDeals([]);
+      setLoading(false);
       return;
     }
     setNetworkIssue(null);
     setAllDeals(data || []);
+    setLoading(false);
   }, [showExpired]);
 
   useEffect(() => {
@@ -150,6 +161,30 @@ export default function HomePage() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void fetchDeals(); }, [fetchDeals]);
+
+  // First visit → interest picker; returning visitor with saved interests → personalized feed by default.
+  useEffect(() => {
+    try {
+      const rawSaved = window.localStorage.getItem(SAVED_CATEGORIES_KEY);
+      const savedCats = rawSaved ? (JSON.parse(rawSaved) as string[]) : [];
+      if (savedCats.length) setFeedMode('personalized');
+      if (!window.localStorage.getItem(ONBOARDED_KEY)) setShowOnboarding(true);
+    } catch { /* localStorage unavailable */ }
+  }, []);
+
+  // Quiet location for distance badges: cached coords first, IP lookup as fallback.
+  // Never activates the Near Me filter on its own.
+  useEffect(() => {
+    const cached = readCachedCoords();
+    if (cached) { setUserLat(cached.lat); setUserLng(cached.lng); return; }
+    let cancelled = false;
+    getLocationByIP().then((loc) => {
+      if (!loc || cancelled) return;
+      setUserLat((prev) => (prev === null ? loc.lat : prev));
+      setUserLng((prev) => (prev === null ? loc.lng : prev));
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const raw = localStorage.getItem('ld_recent_viewed');
@@ -195,6 +230,7 @@ export default function HomePage() {
   const activateWithCoords = (lat: number, lng: number, isIP = false) => {
     setUserLat(lat); setUserLng(lng); setNearMeActive(true);
     setGeoStatus(isIP ? 'ip-fallback' : 'active');
+    if (!isIP) cacheCoords(lat, lng);
   };
 
   const tryIPFallback = async () => {
@@ -241,15 +277,15 @@ export default function HomePage() {
     const boostFirst = (a: Deal, b: Deal) => boostRank(b) - boostRank(a);
     const sorted = [...deals];
     if (feedMode === 'personalized') {
-      const rawSaved = typeof window !== 'undefined' ? window.localStorage.getItem('ld_saved_categories') : null;
-      const favoriteCats = rawSaved ? (JSON.parse(rawSaved) as string[]) : [];
+      const rawSaved = typeof window !== 'undefined' ? window.localStorage.getItem(SAVED_CATEGORIES_KEY) : null;
+      const favoriteCats = (rawSaved ? (JSON.parse(rawSaved) as string[]) : []).map((c) => normalizeCategory(c));
       const recentIdsRaw = typeof window !== 'undefined' ? window.localStorage.getItem('ld_recent_viewed') : null;
       const recentIds = recentIdsRaw ? (JSON.parse(recentIdsRaw) as number[]) : [];
       return sorted.sort((a, b) => {
         const boostDiff = boostFirst(a, b);
         if (boostDiff !== 0) return boostDiff;
-        const aFav = favoriteCats.includes((a.category || '').toLowerCase()) ? 1 : 0;
-        const bFav = favoriteCats.includes((b.category || '').toLowerCase()) ? 1 : 0;
+        const aFav = favoriteCats.includes(normalizeCategory(a.category)) ? 1 : 0;
+        const bFav = favoriteCats.includes(normalizeCategory(b.category)) ? 1 : 0;
         const aRecent = recentIds.includes(a.id) ? 1 : 0;
         const bRecent = recentIds.includes(b.id) ? 1 : 0;
         const aScore = aFav * 30 + aRecent * 15 + (a.rating || 0) * 5 + (a.clicks || 0) * 0.6 + (a.views || 0) * 0.2;
@@ -428,7 +464,17 @@ export default function HomePage() {
       </AnimatePresence>
 
       {/* ── Discovery strips (hidden when filtering) ── */}
-      {!isFiltering && (
+      {!isFiltering && loading && (
+        <div className="mb-5 space-y-5">
+          <div className="h-52 animate-pulse rounded-2xl border border-white/8 bg-slate-800/60" />
+          <div className="flex gap-3 overflow-hidden">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-48 w-40 shrink-0 animate-pulse rounded-2xl border border-white/8 bg-slate-800/60" />
+            ))}
+          </div>
+        </div>
+      )}
+      {!isFiltering && !loading && (
         <>
           {/* Featured Deal — full-width hero card */}
           {hotDeals[0] && (
@@ -477,13 +523,13 @@ export default function HomePage() {
           )}
 
           {/* 🔥 Hot Today */}
-          {hotDeals.length > 1 && <StripSection title="🔥 Hot Today" deals={hotDeals.slice(1, 11)} />}
+          {hotDeals.length > 1 && <StripSection title="🔥 Hot Today" deals={hotDeals.slice(1, 11)} userLat={userLat} userLng={userLng} />}
 
           {/* ⭐ Top Rated */}
-          {topRatedStrip.length > 0 && <StripSection title="⭐ Top Rated" deals={topRatedStrip} />}
+          {topRatedStrip.length > 0 && <StripSection title="⭐ Top Rated" deals={topRatedStrip} userLat={userLat} userLng={userLng} />}
 
           {/* ⏰ Ending Soon */}
-          {endingSoonStrip.length > 0 && <StripSection title="⏰ Ending Soon" deals={endingSoonStrip} urgency />}
+          {endingSoonStrip.length > 0 && <StripSection title="⏰ Ending Soon" deals={endingSoonStrip} urgency userLat={userLat} userLng={userLng} />}
 
           {/* Ending today urgency banner */}
           {dealsEndingToday > 0 && (
@@ -502,7 +548,7 @@ export default function HomePage() {
           )}
 
           {/* 👀 Recently Viewed */}
-          {recentDeals.length > 0 && <StripSection title="👀 Recently Viewed" deals={recentDeals} />}
+          {recentDeals.length > 0 && <StripSection title="👀 Recently Viewed" deals={recentDeals} userLat={userLat} userLng={userLng} />}
         </>
       )}
 
@@ -613,6 +659,10 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
+      ) : loading ? (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
       ) : displayedDeals.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-24 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/8 bg-slate-900/80">
@@ -637,7 +687,7 @@ export default function HomePage() {
                 exit={{ opacity: 0, scale: 0.97 }}
                 transition={{ duration: 0.22 }}
               >
-                <DealCard deal={deal} />
+                <DealCard deal={deal} userLat={userLat} userLng={userLng} />
               </motion.div>
             ))}
           </AnimatePresence>
@@ -661,61 +711,48 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* ── First-visit interest picker ── */}
+      {showOnboarding && (
+        <InterestPicker
+          onDone={(picked) => {
+            setShowOnboarding(false);
+            if (picked.length) setFeedMode('personalized');
+          }}
+        />
+      )}
+
     </main>
   );
 }
 
-function discountPct(deal: Deal): number | null {
-  if (!deal.original_price || !deal.offer_price) return null;
-  const orig = parseFloat(String(deal.original_price).replace(/[^0-9.]/g, ''));
-  const offer = parseFloat(String(deal.offer_price).replace(/[^0-9.]/g, ''));
-  if (!orig || !offer || offer >= orig) return null;
-  return Math.round(((orig - offer) / orig) * 100);
-}
-
-function MiniCard({ deal }: { deal: Deal }) {
-  const pct = discountPct(deal);
+function SkeletonCard() {
   return (
-    <Link
-      href={`/deal/${deal.id}`}
-      className="flex w-40 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/8 bg-slate-900 active:scale-95 active:opacity-90 transition-all duration-150 select-none"
-    >
-      <div className="relative h-24 overflow-hidden bg-slate-800">
-        {deal.image ? (
-          <img src={deal.image} alt={deal.title} className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full items-center justify-center text-4xl">
-            {getCategoryMeta(deal.category).emoji}
-          </div>
-        )}
-        {pct !== null && (
-          <span className="absolute left-1.5 top-1.5 rounded-md bg-rose-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white leading-none">
-            -{pct}%
-          </span>
-        )}
-        {deal.is_boosted && (
-          <span className="absolute right-1.5 top-1.5 rounded-md bg-violet-500/90 px-1.5 py-0.5 text-[10px] font-extrabold text-white leading-none">
-            ✦
-          </span>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col p-2.5">
-        <p className="line-clamp-2 text-[12px] font-bold leading-snug text-white">{deal.title}</p>
-        <div className="mt-auto space-y-0.5 pt-2">
-          {deal.offer_price && (
-            <p className="text-[12px] font-extrabold text-violet-400">{deal.offer_price}</p>
-          )}
-          {(deal.rating || 0) > 0 && (
-            <p className="text-[11px] font-semibold text-amber-400">★ {deal.rating?.toFixed(1)}</p>
-          )}
-          <p className="truncate text-[11px] text-slate-600">{deal.area || deal.city || ''}</p>
+    <div className="animate-pulse overflow-hidden rounded-2xl border border-white/8 bg-slate-900/95">
+      <div className="h-48 bg-slate-800/70 md:h-52" />
+      <div className="space-y-3 p-4">
+        <div className="h-4 w-3/4 rounded-lg bg-slate-800/70" />
+        <div className="h-3 w-full rounded-lg bg-slate-800/50" />
+        <div className="h-3 w-1/2 rounded-lg bg-slate-800/50" />
+        <div className="flex gap-2 pt-1">
+          <div className="h-7 w-20 rounded-lg bg-slate-800/50" />
+          <div className="h-7 w-20 rounded-lg bg-slate-800/50" />
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 
-function StripSection({ title, deals, urgency = false }: { title: string; deals: Deal[]; urgency?: boolean }) {
+function discountPct(deal: Deal): number | null {
+  return getDiscountPct(deal.offer_price, deal.original_price);
+}
+
+function StripSection({ title, deals, urgency = false, userLat, userLng }: {
+  title: string;
+  deals: Deal[];
+  urgency?: boolean;
+  userLat?: number | null;
+  userLng?: number | null;
+}) {
   if (!deals.length) return null;
   return (
     <section className="mb-6">
@@ -727,7 +764,7 @@ function StripSection({ title, deals, urgency = false }: { title: string; deals:
         <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex gap-3 px-4" style={{ width: 'max-content' }}>
             {deals.map((deal) => (
-              <MiniCard key={deal.id} deal={deal} />
+              <MiniDealCard key={deal.id} deal={deal} userLat={userLat} userLng={userLng} />
             ))}
             <div className="w-2 shrink-0" />
           </div>

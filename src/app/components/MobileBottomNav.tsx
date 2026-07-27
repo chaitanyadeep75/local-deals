@@ -62,7 +62,7 @@ export default function MobileBottomNav() {
     : isBusiness
     ? { href: '/business/dashboard', label: 'Dash', Icon: LayoutDashboard }
     : user
-    ? { href: '/user/profile', label: 'Saved', Icon: Bookmark }
+    ? { href: '/saved', label: 'Saved', Icon: Bookmark }
     : { href: '/user/login', label: 'Login', Icon: UserCircle2 };
 
   return (

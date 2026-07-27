@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
 import { supabase } from '@/app/lib/supabase';
-import { getCategoryLabel } from '@/app/lib/categories';
+import { getCategoryLabel, getCategoryMeta } from '@/app/lib/categories';
+import InterestPicker, { readSavedInterests } from '@/app/components/InterestPicker';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import {
   Bookmark, Star, User as UserIcon, Mail, LogOut,
-  MapPin, Trash2, ChevronRight, Bell, Share2, Copy,
+  MapPin, Trash2, ChevronRight, Bell, Share2, Copy, Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateReferralCode } from '@/app/lib/growth';
@@ -79,6 +80,11 @@ export default function UserProfilePage() {
   });
   const [referralCode, setReferralCode] = useState('');
   const [referralCount, setReferralCount] = useState(0);
+  const [interests, setInterests] = useState<string[]>([]);
+  const [editingInterests, setEditingInterests] = useState(false);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setInterests(readSavedInterests()); }, []);
 
   async function fetchSaved(userId: string) {
     const { data } = await supabase
@@ -427,6 +433,34 @@ export default function UserProfilePage() {
               </div>
 
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">My Interests</p>
+                  <button
+                    onClick={() => setEditingInterests(true)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-100 transition"
+                  >
+                    <Sparkles size={12} /> Edit
+                  </button>
+                </div>
+                <div className="px-5 py-4">
+                  {interests.length === 0 ? (
+                    <p className="text-sm text-gray-400">
+                      No interests picked yet — add some to get a personalized feed.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {interests.map((cat) => (
+                        <span key={cat} className="inline-flex items-center gap-1 rounded-full bg-violet-50 border border-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
+                          <span>{getCategoryMeta(cat).emoji}</span>
+                          {getCategoryLabel(cat)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-gray-50">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Notifications</p>
                 </div>
@@ -481,6 +515,15 @@ export default function UserProfilePage() {
 
         </AnimatePresence>
       </div>
+
+      {editingInterests && (
+        <InterestPicker
+          mode="edit"
+          initialPicked={interests}
+          onCancel={() => setEditingInterests(false)}
+          onDone={(picked) => { setInterests(picked); setEditingInterests(false); }}
+        />
+      )}
     </main>
   );
 }
