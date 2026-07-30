@@ -13,7 +13,8 @@ import {
   MapPin, Trash2, ChevronRight, Bell, Share2, Copy, Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { generateReferralCode } from '@/app/lib/growth';
+import { getOrCreateReferralCode } from '@/app/lib/growth';
+import { subscribeToPush, unsubscribeFromPush, isPushSupported } from '@/app/lib/push';
 
 type SavedDeal = {
   id: number;
@@ -80,6 +81,7 @@ export default function UserProfilePage() {
   });
   const [referralCode, setReferralCode] = useState('');
   const [referralCount, setReferralCount] = useState(0);
+  const [pushStatus, setPushStatus] = useState<string | null>(null);
   const [interests, setInterests] = useState<string[]>([]);
   const [editingInterests, setEditingInterests] = useState(false);
 
@@ -152,12 +154,13 @@ export default function UserProfilePage() {
           new_nearby_enabled: prefRes.data.new_nearby_enabled ?? true,
         });
       }
-      const code = generateReferralCode(data.user.id);
+      const code = await getOrCreateReferralCode(data.user.id, 'profile');
       setReferralCode(code);
       const refRes = await supabase
         .from('user_referrals')
         .select('id', { count: 'exact', head: true })
-        .eq('inviter_user_id', data.user.id);
+        .eq('inviter_user_id', data.user.id)
+        .eq('status', 'converted');
       setReferralCount(refRes.count || 0);
       setLoading(false);
     };
@@ -166,24 +169,32 @@ export default function UserProfilePage() {
 
   const saveNotificationPrefs = async () => {
     if (!user) return;
+    setPushStatus(null);
     await supabase.from('notification_preferences').upsert({
       user_id: user.id,
       ...notifPrefs,
       updated_at: new Date().toISOString(),
     });
+
+    if (notifPrefs.push_enabled) {
+      if (!isPushSupported()) {
+        setPushStatus('Push notifications aren’t supported in this browser.');
+      } else {
+        const ok = await subscribeToPush(user.id);
+        setPushStatus(ok
+          ? 'Push alerts are on for this device.'
+          : 'Couldn’t enable push — check notification permission for this site.');
+      }
+    } else {
+      await unsubscribeFromPush();
+      setPushStatus('Push alerts are off for this device.');
+    }
   };
 
   const copyReferralLink = async () => {
     if (!user || !referralCode) return;
     const link = `${window.location.origin}/user/signup?ref=${encodeURIComponent(referralCode)}`;
     await navigator.clipboard.writeText(link);
-    await supabase.from('user_referrals').insert({
-      inviter_user_id: user.id,
-      referral_code: referralCode,
-      source: 'share',
-      reward_points: 0,
-      status: 'pending',
-    });
   };
 
   const removeSaved = async (savedId: number) => {
@@ -513,6 +524,7 @@ export default function UserProfilePage() {
                   >
                     Save notification preferences
                   </button>
+                  {pushStatus && <p className="text-xs text-slate-500">{pushStatus}</p>}
                 </div>
               </div>
 
@@ -521,7 +533,7 @@ export default function UserProfilePage() {
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Referral & Invite</p>
                 </div>
                 <div className="px-5 py-4 space-y-3">
-                  <p className="text-sm text-slate-300">Invites sent: <span className="font-semibold text-violet-300">{referralCount}</span></p>
+                  <p className="text-sm text-slate-300">Friends joined: <span className="font-semibold text-violet-300">{referralCount}</span></p>
                   <p className="rounded-xl bg-slate-800/80 border border-white/10 px-3 py-2 font-mono text-xs text-slate-300">{referralCode}</p>
                   <div className="flex flex-wrap gap-2">
                     <button

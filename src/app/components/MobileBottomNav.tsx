@@ -110,7 +110,7 @@ export default function MobileBottomNav() {
         {/* ── Me / Account ── */}
         <button
           onClick={async () => {
-            if (!user) { router.push('/login'); return; }
+            if (!user) { router.push('/user/signup'); return; }
             await supabase.auth.signOut();
             localStorage.removeItem('ld_role_hint');
             void trackEvent('mobile_logout', { source: 'mobile_bottom_nav' });

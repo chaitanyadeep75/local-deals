@@ -3,6 +3,7 @@
 import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
+import { attributeReferral } from '@/app/lib/growth';
 import { Zap } from 'lucide-react';
 
 function CallbackHandler() {
@@ -22,6 +23,14 @@ function CallbackHandler() {
         const role = data.user.user_metadata?.role;
         if (!role || role === 'user') {
           localStorage.setItem('ld_role_hint', 'user');
+        }
+
+        // Attribute a referral only if this account was created moments ago
+        // (a fresh OAuth signup), not on every subsequent Google login.
+        const refCode = params.get('ref');
+        const createdAt = data.user.created_at ? new Date(data.user.created_at).getTime() : 0;
+        if (refCode && createdAt && Date.now() - createdAt < 2 * 60 * 1000) {
+          void attributeReferral(refCode, data.user.id);
         }
       }
 

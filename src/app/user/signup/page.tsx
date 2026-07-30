@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
+import { attributeReferral } from '@/app/lib/growth';
 import Link from 'next/link';
 import { Mail, Lock, User, Zap, AlertCircle, Eye, EyeOff, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
 
@@ -38,14 +39,21 @@ export default function UserSignupPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [refCode, setRefCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('ref');
+    if (code) setRefCode(code);
+  }, []);
 
   const handleGoogle = async () => {
     setGoogleLoading(true);
     setError(null);
+    const next = refCode ? `/auth/callback?ref=${encodeURIComponent(refCode)}` : '/auth/callback';
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}${next}`,
         queryParams: { prompt: 'select_account' },
       },
     });
@@ -57,13 +65,14 @@ export default function UserSignupPage() {
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: name.trim(), role: 'user' } },
     });
     setLoading(false);
     if (error) { setError(error.message); return; }
+    if (refCode && data.user) void attributeReferral(refCode, data.user.id);
     setSuccess(true);
   };
 

@@ -6,6 +6,7 @@ import DealCard from '@/app/components/DealCard';
 import { CATEGORY_FILTERS, categoryMatchesFilter, getCategoryLabel, getCategoryMeta, normalizeCategory } from '@/app/lib/categories';
 import { haversineKm, getDiscountPct } from '@/app/lib/deal-utils';
 import InterestPicker, { ONBOARDED_KEY, SAVED_CATEGORIES_KEY } from '@/app/components/InterestPicker';
+import { getTopCategoryAffinity } from '@/app/lib/growth';
 import MiniDealCard from '@/app/components/MiniDealCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -114,6 +115,7 @@ export default function HomePage() {
   const [networkIssue, setNetworkIssue] = useState<string | null>(null);
   const [recentDeals, setRecentDeals] = useState<Deal[]>([]);
   const [isBusiness, setIsBusiness] = useState(false);
+  const [affinityCategories, setAffinityCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -156,6 +158,7 @@ export default function HomePage() {
       if (!data.user) return;
       const role = data.user.user_metadata?.role;
       if (role === 'business') setIsBusiness(true);
+      getTopCategoryAffinity(data.user.id).then(setAffinityCategories);
     });
   }, []);
 
@@ -281,6 +284,9 @@ export default function HomePage() {
       const favoriteCats = (rawSaved ? (JSON.parse(rawSaved) as string[]) : []).map((c) => normalizeCategory(c));
       const recentIdsRaw = typeof window !== 'undefined' ? window.localStorage.getItem('ld_recent_viewed') : null;
       const recentIds = recentIdsRaw ? (JSON.parse(recentIdsRaw) as number[]) : [];
+      // Server-side behavior affinity (logged-in only), best category first —
+      // rank-weighted so the strongest signal counts most.
+      const affinityWeight = new Map(affinityCategories.map((c, i) => [c, Math.max(0, 10 - i)]));
       return sorted.sort((a, b) => {
         const boostDiff = boostFirst(a, b);
         if (boostDiff !== 0) return boostDiff;
@@ -288,8 +294,10 @@ export default function HomePage() {
         const bFav = favoriteCats.includes(normalizeCategory(b.category)) ? 1 : 0;
         const aRecent = recentIds.includes(a.id) ? 1 : 0;
         const bRecent = recentIds.includes(b.id) ? 1 : 0;
-        const aScore = aFav * 30 + aRecent * 15 + (a.rating || 0) * 5 + (a.clicks || 0) * 0.6 + (a.views || 0) * 0.2;
-        const bScore = bFav * 30 + bRecent * 15 + (b.rating || 0) * 5 + (b.clicks || 0) * 0.6 + (b.views || 0) * 0.2;
+        const aAffinity = affinityWeight.get(normalizeCategory(a.category)) || 0;
+        const bAffinity = affinityWeight.get(normalizeCategory(b.category)) || 0;
+        const aScore = aFav * 30 + aRecent * 15 + aAffinity * 4 + (a.rating || 0) * 5 + (a.clicks || 0) * 0.6 + (a.views || 0) * 0.2;
+        const bScore = bFav * 30 + bRecent * 15 + bAffinity * 4 + (b.rating || 0) * 5 + (b.clicks || 0) * 0.6 + (b.views || 0) * 0.2;
         return bScore - aScore;
       });
     }
@@ -305,7 +313,7 @@ export default function HomePage() {
     }
     if (feedMode === 'trending') return sorted.sort((a, b) => boostFirst(a, b) || ((b.clicks || 0) + (b.views || 0)) - ((a.clicks || 0) + (a.views || 0)));
     return sorted.sort(boostFirst);
-  }, [deals, feedMode]);
+  }, [deals, feedMode, affinityCategories]);
 
   const dealsEndingToday = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];

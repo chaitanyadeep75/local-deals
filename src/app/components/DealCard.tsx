@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { formatOfferLine, getUrgencyLabel, haversineKm, formatDistance, getDiscountPct } from '@/app/lib/deal-utils';
 import { normalizeCategory } from '@/app/lib/categories';
 import { trackEvent } from '@/app/lib/analytics';
+import { getOrCreateReferralCode, recordSignal } from '@/app/lib/growth';
 
 type Deal = {
   id: number;
@@ -229,6 +230,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
             const next = Array.from(new Set([normalizeCategory(deal.category), ...prev])).slice(0, 12);
             window.localStorage.setItem('ld_saved_categories', JSON.stringify(next));
           }
+          recordSignal({ userId: uid, signalType: 'save', dealId: deal.id, category: deal.category, city: deal.city, area: deal.area, score: 3 });
           void trackEvent('deal_saved', { deal_id: deal.id });
         }
       }
@@ -243,13 +245,20 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
       window.localStorage.setItem('ld_recent_viewed', JSON.stringify(next));
     }
     void supabase.from('deals').update({ views: (deal.views || 0) + 1 }).eq('id', deal.id);
+    if (userId) recordSignal({ userId, signalType: 'click', dealId: deal.id, category: deal.category, city: deal.city, area: deal.area, score: 1 });
     void trackEvent('deal_card_opened', { deal_id: deal.id });
     router.push(`/deal/${deal.id}`);
   };
 
-  const getShareUrl = () => {
-    if (typeof window === 'undefined') return `/deal/${deal.id}`;
-    return `${window.location.origin}/deal/${deal.id}`;
+  const getShareUrl = async () => {
+    const base = typeof window === 'undefined' ? `/deal/${deal.id}` : `${window.location.origin}/deal/${deal.id}`;
+    if (!userId) return base;
+    try {
+      const code = await getOrCreateReferralCode(userId, 'deal_share');
+      return `${base}?ref=${encodeURIComponent(code)}`;
+    } catch {
+      return base;
+    }
   };
 
   const copyCoupon = async (e: React.MouseEvent) => {
@@ -270,7 +279,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
 
   const shareDeal = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = getShareUrl();
+    const url = await getShareUrl();
     const text = `${deal.title} on LocalDeals`;
     if (navigator.share) {
       try {
@@ -285,12 +294,17 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
     void trackEvent('deal_shared', { deal_id: deal.id, channel: 'copy_fallback' });
   };
 
-  const shareOnWhatsApp = (e: React.MouseEvent) => {
+  const shareOnWhatsApp = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = getShareUrl();
+    // Open the tab synchronously (within the click gesture) so popup blockers
+    // don't kill it, then point it at the real URL once the async work resolves.
+    const win = window.open('', '_blank');
+    const url = await getShareUrl();
     const msg = encodeURIComponent(`Check this deal: ${deal.title}\n${url}`);
     void trackEvent('deal_shared', { deal_id: deal.id, channel: 'whatsapp' });
-    window.open(`https://wa.me/?text=${msg}`, '_blank');
+    const target = `https://wa.me/?text=${msg}`;
+    if (win) win.location.href = target;
+    else window.open(target, '_blank');
   };
 
   const syncDealRating = async () => {

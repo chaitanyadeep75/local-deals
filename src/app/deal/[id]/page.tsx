@@ -15,6 +15,7 @@ import {
 import { formatOfferLine, getUrgencyLabel, haversineKm, formatDistance } from '@/app/lib/deal-utils';
 import MiniDealCard from '@/app/components/MiniDealCard';
 import { trackEvent } from '@/app/lib/analytics';
+import { getOrCreateReferralCode, recordSignal } from '@/app/lib/growth';
 
 type Deal = {
   id: number;
@@ -83,6 +84,17 @@ export default function DealDetailPage() {
   const [saveLoading, setSaveLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [similarDeals, setSimilarDeals] = useState<Deal[]>([]);
+  const [incomingRef, setIncomingRef] = useState<string | null>(null);
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('ref');
+    if (code) setIncomingRef(code);
+  }, []);
+
+  const loginRedirect = useMemo(() => {
+    const next = incomingRef ? `/deal/${dealId}?ref=${encodeURIComponent(incomingRef)}` : `/deal/${dealId}`;
+    return `/user/login?next=${encodeURIComponent(next)}`;
+  }, [dealId, incomingRef]);
 
   useEffect(() => {
     try {
@@ -148,7 +160,7 @@ export default function DealDetailPage() {
 
   const toggleSave = async () => {
     if (!dealId || saveLoading) return;
-    if (!userId) { router.push(`/user/login?next=/deal/${dealId}`); return; }
+    if (!userId) { router.push(loginRedirect); return; }
     setSaveLoading(true);
     try {
       if (saved && savedId) {
@@ -163,6 +175,7 @@ export default function DealDetailPage() {
           .single();
         if (!error && data) {
           setSaved(true); setSavedId(data.id);
+          recordSignal({ userId, signalType: 'save', dealId, category: deal?.category, city: deal?.city, area: deal?.area, score: 3 });
           void trackEvent('deal_saved', { deal_id: dealId, surface: 'deal_detail' });
         }
       }
@@ -171,7 +184,13 @@ export default function DealDetailPage() {
 
   const shareDeal = async () => {
     if (!deal) return;
-    const url = `${window.location.origin}/deal/${deal.id}`;
+    let url = `${window.location.origin}/deal/${deal.id}`;
+    if (userId) {
+      try {
+        const code = await getOrCreateReferralCode(userId, 'deal_share');
+        url += `?ref=${encodeURIComponent(code)}`;
+      } catch { /* share the plain link if referral lookup fails */ }
+    }
     if (navigator.share) {
       try {
         await navigator.share({ title: deal.title, text: `${deal.title} on LocalDeals`, url });
@@ -220,6 +239,14 @@ export default function DealDetailPage() {
       const uid = authError ? null : (authData.user?.id || null);
       setUserId(uid);
 
+      if (uid && dealData) {
+        recordSignal({
+          userId: uid, signalType: 'view', dealId: (dealData as Deal).id,
+          category: (dealData as Deal).category, city: (dealData as Deal).city, area: (dealData as Deal).area,
+          score: 1,
+        });
+      }
+
       if (uid && reviewData) {
         const mine = reviewData.find((r) => r.user_id === uid);
         if (mine) {
@@ -261,7 +288,7 @@ export default function DealDetailPage() {
   const submitReview = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!dealId) return;
-    if (!userId) { router.push(`/user/login?next=/deal/${dealId}`); return; }
+    if (!userId) { router.push(loginRedirect); return; }
     if (submitting) return;
     setSubmitting(true);
     try {
@@ -301,7 +328,7 @@ export default function DealDetailPage() {
 
   const submitClaim = async () => {
     if (!dealId || !deal) return;
-    if (!userId) { router.push(`/user/login?next=/deal/${dealId}`); return; }
+    if (!userId) { router.push(loginRedirect); return; }
     setClaiming(true);
     const claim = await supabase.from('business_claims').insert({
       deal_id: dealId,
@@ -316,7 +343,7 @@ export default function DealDetailPage() {
   };
 
   const reportDeal = async () => {
-    if (!dealId || !userId) { router.push(`/user/login?next=/deal/${dealId || ''}`); return; }
+    if (!dealId || !userId) { router.push(loginRedirect); return; }
     setReporting(true);
     const report = await supabase.from('abuse_reports').insert({
       reporter_user_id: userId,
@@ -760,7 +787,7 @@ export default function DealDetailPage() {
                       <span className="text-xs text-slate-500">{new Date(review.created_at).toLocaleDateString('en-IN')}</span>
                       <button
                         onClick={async () => {
-                          if (!userId) { router.push(`/user/login?next=/deal/${dealId || ''}`); return; }
+                          if (!userId) { router.push(loginRedirect); return; }
                           await supabase.from('abuse_reports').insert({
                             reporter_user_id: userId,
                             review_id: review.id,
