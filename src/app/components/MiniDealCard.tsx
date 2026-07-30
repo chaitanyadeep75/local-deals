@@ -1,8 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { MapPin, Rocket } from 'lucide-react';
 import { getCategoryMeta } from '@/app/lib/categories';
 import { getDiscountPct, haversineKm, formatDistance } from '@/app/lib/deal-utils';
+
+const MotionLink = motion(Link);
 
 export type MiniDeal = {
   id: number;
@@ -30,9 +34,12 @@ export default function MiniDealCard({ deal, userLat, userLng }: {
       ? formatDistance(haversineKm(userLat, userLng, deal.latitude, deal.longitude))
       : null;
   return (
-    <Link
+    <MotionLink
       href={`/deal/${deal.id}`}
-      className="flex w-40 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/8 bg-slate-900 active:scale-95 active:opacity-90 transition-all duration-150 select-none"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      className="card-press flex w-40 shrink-0 flex-col overflow-hidden rounded-2xl border border-white/8 bg-slate-900/80 transition-all duration-150 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
     >
       <div className="relative h-24 overflow-hidden bg-slate-800">
         {deal.image ? (
@@ -44,13 +51,13 @@ export default function MiniDealCard({ deal, userLat, userLng }: {
           </div>
         )}
         {pct !== null && (
-          <span className="absolute left-1.5 top-1.5 rounded-md bg-rose-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white leading-none">
+          <span className="absolute left-1.5 top-1.5 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white leading-none">
             -{pct}%
           </span>
         )}
         {deal.is_boosted && (
-          <span className="absolute right-1.5 top-1.5 rounded-md bg-violet-500/90 px-1.5 py-0.5 text-[10px] font-extrabold text-white leading-none">
-            ✦
+          <span className="absolute right-1.5 top-1.5 flex items-center gap-0.5 rounded-full bg-violet-500/90 px-1.5 py-0.5 text-[10px] font-extrabold text-white leading-none">
+            <Rocket size={9} />
           </span>
         )}
       </div>
@@ -63,13 +70,17 @@ export default function MiniDealCard({ deal, userLat, userLng }: {
           {(deal.rating || 0) > 0 && (
             <p className="text-[11px] font-semibold text-amber-400">★ {deal.rating?.toFixed(1)}</p>
           )}
-          <p className="truncate text-[11px] text-slate-600">
-            {distanceLabel && <span className="font-semibold text-emerald-400/80">📍 {distanceLabel}</span>}
+          <p className="truncate text-[11px] text-slate-500">
+            {distanceLabel && (
+              <span className="inline-flex items-center gap-0.5 font-semibold text-emerald-400/80">
+                <MapPin size={9} /> {distanceLabel}
+              </span>
+            )}
             {distanceLabel && (deal.area || deal.city) ? ' · ' : ''}
             {deal.area || deal.city || ''}
           </p>
         </div>
       </div>
-    </Link>
+    </MotionLink>
   );
 }

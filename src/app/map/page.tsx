@@ -6,10 +6,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   BadgeCheck, Compass, Crosshair, MapPinned, Search, SlidersHorizontal,
   Sparkles, Star, Timer, TrendingUp, ChevronDown, ChevronUp, X, Layers,
-  Navigation, Flame,
+  Navigation, Flame, MapPin,
 } from 'lucide-react';
 import { getUrgencyLabel } from '@/app/lib/deal-utils';
 import { trackEvent } from '@/app/lib/analytics';
@@ -63,8 +64,8 @@ function StarRating({ rating, count }: { rating: number; count?: number | null }
       {[1,2,3,4,5].map((s) => (
         <span key={s} style={{ color: s <= stars ? '#f59e0b' : '#d1d5db', fontSize: 11 }}>★</span>
       ))}
-      <span className="ml-1 text-[11px] font-semibold text-amber-700">{rating.toFixed(1)}</span>
-      {count != null && <span className="text-[10px] text-slate-400"> ({count})</span>}
+      <span className="ml-1 text-[11px] font-semibold text-amber-400">{rating.toFixed(1)}</span>
+      {count != null && <span className="text-[10px] text-slate-500"> ({count})</span>}
     </span>
   );
 }
@@ -279,24 +280,25 @@ export default function MapPage() {
             >
               {item.isCluster ? (
                 <button type="button"
-                  className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-extrabold shadow-xl transition hover:scale-110
+                  aria-label={`${item.count} deals in this area`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-extrabold shadow-lg transition-all duration-150 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
                     ${item.hasVerified
-                      ? 'border-emerald-300 bg-gradient-to-br from-emerald-400 to-teal-500 text-white'
-                      : 'border-indigo-300 bg-gradient-to-br from-indigo-500 to-purple-600 text-white'}`}
+                      ? 'border-emerald-300 bg-emerald-500 text-white'
+                      : 'border-indigo-300 bg-indigo-600 text-white'}`}
                 >
                   {item.count}
                 </button>
               ) : (
                 <button type="button"
                   aria-label={`Open ${item.deal?.title || 'deal'}`}
-                  className={`group relative flex h-8 w-8 items-center justify-center rounded-full border-2 shadow-lg transition-all duration-150 hover:scale-125 hover:shadow-xl
+                  className={`group relative flex h-8 w-8 items-center justify-center rounded-full border-2 shadow-lg transition-all duration-150 hover:scale-125 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
                     ${activeSelected?.id === item.deal?.id
                       ? 'border-amber-300 bg-amber-400 text-amber-900 scale-125'
                       : item.isBoosted
-                        ? 'border-fuchsia-300 bg-gradient-to-br from-fuchsia-400 to-pink-500 text-white'
+                        ? 'border-fuchsia-300 bg-fuchsia-500 text-white'
                         : item.hasVerified
-                          ? 'border-emerald-200 bg-gradient-to-br from-emerald-400 to-teal-500 text-white'
-                          : 'border-rose-200 bg-gradient-to-br from-rose-400 to-orange-500 text-white'}`}
+                          ? 'border-emerald-200 bg-emerald-500 text-white'
+                          : 'border-rose-200 bg-rose-500 text-white'}`}
                 >
                   <MapPinned className="h-3.5 w-3.5" />
                   {/* Drop shadow dot */}
@@ -323,7 +325,7 @@ export default function MapPage() {
               maxWidth="280px"
               offset={16}
             >
-              <div className="overflow-hidden rounded-xl text-sm">
+              <div className="overflow-hidden rounded-2xl bg-slate-900 text-sm">
                 {/* Image */}
                 {coverImage(activeSelected) && (
                   <div className="relative -mx-3 -mt-3 mb-2 h-32 w-[calc(100%+24px)]">
@@ -346,148 +348,157 @@ export default function MapPage() {
                   </div>
                 )}
 
-                {/* Title & badges */}
-                <h3 className="font-bold text-slate-900 leading-snug">{activeSelected.title}</h3>
+                <div className="px-3 pb-3">
+                  {/* Title & badges */}
+                  <h3 className="font-bold text-slate-100 leading-snug">{activeSelected.title}</h3>
 
-                <div className="mt-1 flex flex-wrap items-center gap-1">
-                  {activeSelected.is_verified && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
-                      <BadgeCheck size={10} /> Verified
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                    {activeSelected.is_verified && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                        <BadgeCheck size={10} /> Verified
+                      </span>
+                    )}
+                    {getUrgencyLabel(activeSelected.valid_till_date || null) && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-medium text-rose-300">
+                        <Timer size={10} /> {getUrgencyLabel(activeSelected.valid_till_date || null)}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-slate-400">{activeSelected.description}</p>
+
+                  {/* Location */}
+                  <p className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-500">
+                    <Navigation size={10} className="shrink-0" />
+                    {[activeSelected.area, activeSelected.city].filter(Boolean).join(', ') || 'Location'}
+                  </p>
+
+                  {/* Rating + views */}
+                  <div className="mt-1.5 flex items-center gap-2">
+                    {(activeSelected.rating || 0) > 0 && (
+                      <StarRating rating={activeSelected.rating || 0} count={activeSelected.rating_count} />
+                    )}
+                    <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
+                      <TrendingUp size={10} /> {activeSelected.views || 0} views
                     </span>
-                  )}
-                  {getUrgencyLabel(activeSelected.valid_till_date || null) && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700">
-                      <Timer size={10} /> {getUrgencyLabel(activeSelected.valid_till_date || null)}
-                    </span>
-                  )}
-                </div>
+                  </div>
 
-                <p className="mt-1.5 line-clamp-2 text-xs text-slate-600">{activeSelected.description}</p>
-
-                {/* Location */}
-                <p className="mt-1 flex items-center gap-0.5 text-[11px] text-slate-500">
-                  <Navigation size={10} className="shrink-0" />
-                  {[activeSelected.area, activeSelected.city].filter(Boolean).join(', ') || 'Location'}
-                </p>
-
-                {/* Rating + views */}
-                <div className="mt-1.5 flex items-center gap-2">
-                  {(activeSelected.rating || 0) > 0 && (
-                    <StarRating rating={activeSelected.rating || 0} count={activeSelected.rating_count} />
-                  )}
-                  <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
-                    <TrendingUp size={10} /> {activeSelected.views || 0} views
-                  </span>
-                </div>
-
-                {/* CTA buttons */}
-                <div className="mt-2.5 flex items-center gap-1.5">
-                  <button
-                    onClick={() => openDirections(activeSelected.latitude, activeSelected.longitude, activeSelected.id)}
-                    className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-700"
-                  >
-                    <Compass size={11} /> Directions
-                  </button>
-                  <Link
-                    href={`/deal/${activeSelected.id}`}
-                    onClick={() => { void trackEvent('map_view_deal_click', { deal_id: activeSelected.id }); }}
-                    className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    <Sparkles size={11} /> View deal
-                  </Link>
+                  {/* CTA buttons */}
+                  <div className="mt-3 flex items-center gap-1.5">
+                    <button
+                      onClick={() => openDirections(activeSelected.latitude, activeSelected.longitude, activeSelected.id)}
+                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-2.5 py-2 text-xs font-semibold text-white shadow-neon-violet transition-transform duration-150 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                    >
+                      <Compass size={11} /> Directions
+                    </button>
+                    <Link
+                      href={`/deal/${activeSelected.id}`}
+                      onClick={() => { void trackEvent('map_view_deal_click', { deal_id: activeSelected.id }); }}
+                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-2 text-xs font-semibold text-slate-200 transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                    >
+                      <Sparkles size={11} /> View deal
+                    </Link>
+                  </div>
                 </div>
               </div>
             </Popup>
           )}
         </MapView>
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-slate-100 px-4 text-center">
-          <div className="max-w-md rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800 shadow-lg">
-            <p className="text-base font-bold">Map not configured</p>
-            <p className="mt-2 text-xs">Add <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_MAPBOX_TOKEN</code> in your environment and redeploy.</p>
+        <div className="flex h-full w-full items-center justify-center bg-slate-950 px-4 text-center">
+          <div className="max-w-md rounded-3xl border border-white/10 bg-slate-900/80 p-8 shadow-card backdrop-blur-xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/15">
+              <MapPin size={22} className="text-amber-400" />
+            </div>
+            <p className="mt-4 text-base font-extrabold tracking-tight text-slate-100">Map not configured</p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-400">
+              Add <code className="rounded bg-slate-800/80 px-1.5 py-0.5 text-amber-300">NEXT_PUBLIC_MAPBOX_TOKEN</code> in your environment and redeploy.
+            </p>
           </div>
         </div>
       )}
 
       {/* ── TOP FILTER PANEL ── */}
-      <section className="pointer-events-none absolute left-3 top-3 z-20 w-[calc(100%-24px)] max-w-sm rounded-2xl border border-white/60 bg-white/95 shadow-2xl backdrop-blur-md md:left-4 md:top-4 md:max-w-md">
+      <section className="pointer-events-none absolute left-3 top-3 z-20 w-[calc(100%-24px)] max-w-sm rounded-3xl border border-white/10 bg-slate-900/90 shadow-card backdrop-blur-xl md:left-4 md:top-4 md:max-w-md">
         <div className="pointer-events-auto">
           {/* Header */}
-          <div className="flex items-center justify-between rounded-t-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2.5 md:px-4">
+          <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2">
-              <SlidersHorizontal size={14} className="text-white/80" />
-              <span className="text-sm font-bold text-white">Map Explore</span>
+              <SlidersHorizontal size={14} className="text-violet-400" />
+              <span className="text-sm font-bold tracking-tight text-slate-100">Map Explore</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-bold text-white">
+              <span className="rounded-full border border-white/10 bg-slate-800/80 px-2.5 py-0.5 text-[11px] font-semibold text-slate-300">
                 {filteredDeals.length} pins
               </span>
               <button type="button" onClick={() => setTopPanelOpen((p) => !p)}
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-white md:hidden">
+                aria-label={topPanelOpen ? 'Collapse filters' : 'Expand filters'}
+                className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-slate-800/80 text-slate-300 transition hover:bg-slate-700/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 md:hidden">
                 {topPanelOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
               </button>
             </div>
           </div>
 
           {/* Body */}
-          <div className={`${topPanelOpen ? 'block' : 'hidden'} max-h-[45vh] overflow-y-auto p-3 md:block md:max-h-none md:p-4`}>
+          <div className={`${topPanelOpen ? 'block' : 'hidden'} max-h-[45vh] overflow-y-auto px-4 pb-4 md:block md:max-h-none`}>
             {/* Search */}
             <label className="relative block">
-              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search title, area, city..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-8 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+                className="w-full rounded-2xl border border-white/10 bg-slate-800/80 py-2.5 pl-9 pr-8 text-sm text-slate-100 placeholder-slate-500 outline-none transition focus-visible:ring-2 focus-visible:ring-violet-500/40"
               />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <button onClick={() => setSearch('')} aria-label="Clear search"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-full">
                   <X size={14} />
                 </button>
               )}
             </label>
 
             {/* Quick filter buttons */}
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
+            <div className="mt-3 flex flex-wrap gap-1.5">
               <button type="button" onClick={() => { setVerifiedOnly((v) => !v); void trackEvent('map_verified_only_toggle', { active: !verifiedOnly }); }}
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold transition
-                  ${verifiedOnly ? 'bg-emerald-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
+                  ${verifiedOnly ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-300' : 'border-white/10 bg-slate-800/80 text-slate-300 hover:bg-slate-800'}`}>
                 <BadgeCheck size={11} /> Verified
               </button>
               <button type="button" onClick={handleUseMyLocation}
-                className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-200">
+                className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-xs font-semibold text-sky-300 transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
                 <Crosshair size={11} /> {loadingLocation ? 'Locating…' : 'Near me'}
               </button>
               <button type="button" onClick={() => { const n = !searchInArea; setSearchInArea(n); void trackEvent('map_search_area_toggle', { active: n }); }}
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold transition
-                  ${searchInArea ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
+                  ${searchInArea ? 'border-violet-400/40 bg-violet-500/15 text-violet-300' : 'border-white/10 bg-slate-800/80 text-slate-300 hover:bg-slate-800'}`}>
                 Search this area
               </button>
             </div>
 
             {/* Category chips */}
-            <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+            <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-0.5">
               <button key="all" type="button" onClick={() => setCategory('all')}
-                className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold transition
-                  ${category === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
+                  ${category === 'all' ? 'border-violet-400/40 bg-violet-500/15 text-violet-300' : 'border-white/10 bg-slate-800/80 text-slate-400 hover:bg-slate-800'}`}>
                 All
               </button>
               {CATEGORY_OPTIONS.map((opt) => (
                 <button key={opt.value} type="button" onClick={() => setCategory(opt.value)}
-                  className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold transition
-                    ${category === opt.value ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
+                    ${category === opt.value ? 'border-violet-400/40 bg-violet-500/15 text-violet-300' : 'border-white/10 bg-slate-800/80 text-slate-400 hover:bg-slate-800'}`}>
                   {opt.label}
                 </button>
               ))}
             </div>
 
             {/* Map style */}
-            <div className="mt-2 flex items-center gap-1.5">
-              <Layers size={11} className="shrink-0 text-slate-400" />
+            <div className="mt-3 flex items-center gap-1.5">
+              <Layers size={11} className="shrink-0 text-slate-500" />
               {(['streets', 'light', 'satellite'] as const).map((style) => (
                 <button key={style} type="button" onClick={() => setMapStyle(style)}
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize transition
-                    ${mapStyle === style ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold capitalize transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
+                    ${mapStyle === style ? 'border-violet-400/40 bg-violet-500/15 text-violet-300' : 'border-white/10 bg-slate-800/80 text-slate-400 hover:bg-slate-800'}`}>
                   {style}
                 </button>
               ))}
@@ -497,53 +508,66 @@ export default function MapPage() {
       </section>
 
       {/* ── BOTTOM DEALS PANEL ── */}
-      <section className="pointer-events-none absolute bottom-[74px] left-3 z-20 w-[calc(100%-24px)] max-w-sm rounded-2xl border border-white/60 bg-white/95 shadow-2xl backdrop-blur-md md:bottom-4 md:left-4 md:max-w-md">
+      <section className="pointer-events-none absolute bottom-[74px] left-3 z-20 w-[calc(100%-24px)] max-w-sm rounded-3xl border border-white/10 bg-slate-900/90 shadow-card backdrop-blur-xl md:bottom-4 md:left-4 md:max-w-md">
         <div className="pointer-events-auto">
-          <div className="flex items-center justify-between rounded-t-2xl bg-gradient-to-r from-rose-500 to-orange-500 px-3 py-2.5 md:px-4">
+          <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2">
-              <Star size={13} className="text-white/80" fill="currentColor" />
-              <span className="text-sm font-bold text-white">Top nearby</span>
+              <Star size={13} className="text-amber-400" fill="currentColor" />
+              <span className="text-sm font-bold tracking-tight text-slate-100">Top nearby</span>
             </div>
             <div className="flex items-center gap-2">
-              <Link href="/" className="text-[11px] font-medium text-white/80 hover:text-white">Open feed →</Link>
+              <Link href="/" className="text-[11px] font-medium text-slate-400 transition hover:text-slate-200">Open feed →</Link>
               <button type="button" onClick={() => setBottomPanelOpen((p) => !p)}
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-white md:hidden">
+                aria-label={bottomPanelOpen ? 'Collapse top deals' : 'Expand top deals'}
+                className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-slate-800/80 text-slate-300 transition hover:bg-slate-700/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 md:hidden">
                 {bottomPanelOpen ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
               </button>
             </div>
           </div>
 
           <div className={`${bottomPanelOpen ? 'block' : 'hidden'} md:block`}>
-            <div className="max-h-40 space-y-1 overflow-auto p-2 md:max-h-48 md:p-3">
-              {topDeals.length ? topDeals.map((deal) => (
-                <button key={`top-${deal.id}`} type="button"
-                  onClick={() => {
-                    setSelected(deal);
-                    mapRef.current?.flyTo({ center: [deal.longitude, deal.latitude], zoom: Math.max(13, zoom), duration: 700 });
-                    void trackEvent('map_top_deal_click', { deal_id: deal.id });
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-xl border border-transparent bg-slate-50 px-2.5 py-2 text-left transition hover:border-indigo-200 hover:bg-indigo-50"
-                >
-                  {coverImage(deal) && (
-                    <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg">
-                      <Image src={coverImage(deal)!} alt={deal.title} fill className="object-cover" sizes="36px" />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1">
-                      <p className="truncate text-xs font-semibold text-slate-800">{deal.title}</p>
-                      {deal.is_boosted && <Flame size={10} className="shrink-0 text-fuchsia-500" />}
-                    </div>
-                    <p className="truncate text-[10px] text-slate-500">{deal.area || deal.city || 'Unknown area'}</p>
-                  </div>
-                  {(deal.rating || 0) > 0 && (
-                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
-                      <Star size={9} fill="currentColor" /> {(deal.rating || 0).toFixed(1)}
-                    </span>
-                  )}
-                </button>
-              )) : (
-                <p className="rounded-xl bg-slate-50 px-3 py-3 text-xs text-slate-500">No deals match the current filters.</p>
+            <div className="max-h-40 space-y-1.5 overflow-auto px-3 pb-3 md:max-h-48">
+              {topDeals.length ? (
+                <AnimatePresence initial={false}>
+                  {topDeals.map((deal, i) => (
+                    <motion.button
+                      key={`top-${deal.id}`}
+                      type="button"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeOut', delay: i * 0.05 }}
+                      onClick={() => {
+                        setSelected(deal);
+                        mapRef.current?.flyTo({ center: [deal.longitude, deal.latitude], zoom: Math.max(13, zoom), duration: 700 });
+                        void trackEvent('map_top_deal_click', { deal_id: deal.id });
+                      }}
+                      className="card-press flex w-full items-center gap-2.5 rounded-2xl border border-white/5 bg-slate-800/60 px-2.5 py-2 text-left transition hover:border-violet-400/30 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                    >
+                      {coverImage(deal) && (
+                        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg">
+                          <Image src={coverImage(deal)!} alt={deal.title} fill className="object-cover" sizes="36px" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1">
+                          <p className="truncate text-xs font-semibold text-slate-100">{deal.title}</p>
+                          {deal.is_boosted && <Flame size={10} className="shrink-0 text-fuchsia-400" />}
+                        </div>
+                        <p className="truncate text-[10px] text-slate-500">{deal.area || deal.city || 'Unknown area'}</p>
+                      </div>
+                      {(deal.rating || 0) > 0 && (
+                        <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-amber-500/20 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                          <Star size={9} fill="currentColor" /> {(deal.rating || 0).toFixed(1)}
+                        </span>
+                      )}
+                    </motion.button>
+                  ))}
+                </AnimatePresence>
+              ) : (
+                <div className="flex flex-col items-center gap-2 rounded-2xl border border-white/5 bg-slate-800/40 px-4 py-6 text-center">
+                  <MapPin size={20} className="text-slate-600" />
+                  <p className="text-xs leading-relaxed text-slate-500">No deals match the current filters.</p>
+                </div>
               )}
             </div>
           </div>

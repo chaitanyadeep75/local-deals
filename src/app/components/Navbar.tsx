@@ -101,7 +101,7 @@ export default function Navbar() {
   const NavLink = ({ href, icon: Icon, label, active }: { href: string; icon: React.ComponentType<{size?: number}>; label: string; active: boolean }) => (
     <Link
       href={href}
-      className={`hidden items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 md:inline-flex ${
+      className={`hidden items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 md:inline-flex ${
         active
           ? 'bg-white/10 text-white shadow-inner-top'
           : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
@@ -123,7 +123,10 @@ export default function Navbar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 md:px-6">
 
         {/* Logo */}
-        <Link href="/" className="group flex items-center gap-2.5">
+        <Link
+          href="/"
+          className="group flex items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+        >
           <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-neon-violet transition-all duration-300 group-hover:shadow-[0_0_28px_rgba(139,92,246,0.7)]">
             <Zap size={15} className="text-white" fill="white" />
           </div>
@@ -162,13 +165,13 @@ export default function Navbar() {
             <div className="flex items-center gap-2 ml-1">
               <Link
                 href="/user/login"
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 transition-all duration-200 hover:bg-white/10 hover:text-white md:px-4 md:py-2 md:text-sm"
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 transition-all duration-200 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 md:px-4 md:py-2 md:text-sm"
               >
                 Sign In
               </Link>
               <Link
                 href="/login"
-                className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-3 py-1.5 text-xs font-semibold text-white shadow-neon-violet transition-all duration-200 hover:opacity-90 hover:shadow-[0_0_28px_rgba(139,92,246,0.6)] md:px-4 md:py-2 md:text-sm"
+                className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-3 py-1.5 text-xs font-semibold text-white shadow-neon-violet transition-all duration-200 hover:opacity-90 hover:shadow-[0_0_28px_rgba(139,92,246,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 md:px-4 md:py-2 md:text-sm"
               >
                 Business
               </Link>
@@ -177,7 +180,7 @@ export default function Navbar() {
             <>
               <button
                 onClick={handleLogout}
-                className="ml-1 hidden rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-400 transition-all duration-200 hover:bg-rose-500/20 hover:text-rose-300 md:block"
+                className="ml-1 hidden rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-400 transition-all duration-200 hover:bg-rose-500/20 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 md:block"
               >
                 Logout
               </button>
@@ -186,17 +189,19 @@ export default function Navbar() {
               <div ref={dropdownRef} className="relative ml-1">
                 <button
                   onClick={() => setOpen(!open)}
-                  className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 transition-all duration-200 ${
+                  aria-label="Account menu"
+                  aria-expanded={open}
+                  className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 ${
                     open
                       ? 'border-violet-500/40 bg-violet-500/15'
                       : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
                   }`}
                 >
                   <div
-                    className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-white ${
+                    className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-bold ${
                       showBusinessNav
-                        ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600'
-                        : 'bg-gradient-to-br from-emerald-400 to-teal-500'
+                        ? 'border-violet-500/30 bg-violet-500/15 text-violet-300'
+                        : 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
                     }`}
                   >
                     {displayName.charAt(0).toUpperCase() || <User size={14} />}
@@ -210,13 +215,13 @@ export default function Navbar() {
                 {open && (
                   <div className="absolute right-0 top-14 w-72 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 p-1.5 shadow-[0_20px_60px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
                     {/* Header */}
-                    <div className="mb-1 rounded-xl bg-gradient-to-r from-violet-600/20 via-fuchsia-600/10 to-indigo-600/20 p-3.5">
+                    <div className="mb-1 rounded-xl border border-white/8 bg-slate-800/60 p-3.5">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white shadow-lg ${
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-base font-bold ${
                             showBusinessNav
-                              ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-neon-violet'
-                              : 'bg-gradient-to-br from-emerald-400 to-teal-500 shadow-neon-emerald'
+                              ? 'border-violet-500/30 bg-violet-500/15 text-violet-300'
+                              : 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
                           }`}
                         >
                           {displayName.charAt(0).toUpperCase()}
@@ -246,7 +251,7 @@ export default function Navbar() {
                       <Link
                         href="/business/dashboard"
                         onClick={() => setOpen(false)}
-                        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition-all duration-150 hover:bg-white/8 hover:text-white"
+                        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition-all duration-150 hover:bg-white/8 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                       >
                         <LayoutDashboard size={15} className="text-violet-400" />
                         My Dashboard
@@ -256,7 +261,7 @@ export default function Navbar() {
                         <Link
                           href="/saved"
                           onClick={() => setOpen(false)}
-                          className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition-all duration-150 hover:bg-white/8 hover:text-white"
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition-all duration-150 hover:bg-white/8 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                         >
                           <Bookmark size={15} className="text-emerald-400" />
                           My Saved Deals
@@ -264,7 +269,7 @@ export default function Navbar() {
                         <Link
                           href="/user/profile"
                           onClick={() => setOpen(false)}
-                          className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition-all duration-150 hover:bg-white/8 hover:text-white"
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition-all duration-150 hover:bg-white/8 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                         >
                           <User size={15} className="text-violet-400" />
                           Profile & Settings
@@ -275,7 +280,7 @@ export default function Navbar() {
                       <Link
                         href="/admin"
                         onClick={() => setOpen(false)}
-                        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition-all duration-150 hover:bg-white/8 hover:text-white"
+                        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition-all duration-150 hover:bg-white/8 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                       >
                         <Shield size={15} className="text-rose-400" />
                         Admin Console
@@ -286,7 +291,7 @@ export default function Navbar() {
 
                     <button
                       onClick={handleLogout}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-400 transition-all duration-150 hover:bg-rose-500/10 hover:text-rose-300"
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-400 transition-all duration-150 hover:bg-rose-500/10 hover:text-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                     >
                       <LogOut size={14} />
                       Sign Out

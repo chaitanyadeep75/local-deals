@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 import { supabase } from '@/app/lib/supabase';
 import { getCategoryMeta, getCategoryLabel, normalizeCategory } from '@/app/lib/categories';
 import {
   MapPin, Navigation, Star, ShieldCheck, Clock3, Copy, Phone,
   MessageCircleMore, ChevronLeft, ChevronRight, Flag, Store, Check, ArrowLeft,
-  Bookmark, BookmarkCheck, Share2,
+  Bookmark, BookmarkCheck, Share2, Eye, Calendar, SearchX,
 } from 'lucide-react';
 import { formatOfferLine, getUrgencyLabel, haversineKm, formatDistance } from '@/app/lib/deal-utils';
 import MiniDealCard from '@/app/components/MiniDealCard';
@@ -329,10 +330,28 @@ export default function DealDetailPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm">Loading deal...</p>
+      <main className="min-h-screen bg-slate-950 pb-16">
+        <div className="max-w-4xl mx-auto px-3 py-5 md:px-6 md:py-8 animate-pulse">
+          <div className="h-4 w-28 rounded-full bg-slate-800/80 mb-4" />
+          <div className="overflow-hidden rounded-2xl border border-white/8 bg-slate-900/80">
+            <div className="h-64 w-full md:h-80 bg-slate-800/80" />
+            <div className="p-5 md:p-7 space-y-4">
+              <div className="h-7 w-3/4 rounded-lg bg-slate-800/80" />
+              <div className="flex gap-2">
+                <div className="h-5 w-20 rounded-full bg-slate-800/80" />
+                <div className="h-5 w-16 rounded-full bg-slate-800/80" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-full rounded bg-slate-800/60" />
+                <div className="h-3 w-5/6 rounded bg-slate-800/60" />
+              </div>
+              <div className="flex gap-2">
+                <div className="h-10 w-36 rounded-xl bg-slate-800/80" />
+                <div className="h-10 w-24 rounded-xl bg-slate-800/80" />
+                <div className="h-10 w-24 rounded-xl bg-slate-800/80" />
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     );
@@ -340,11 +359,22 @@ export default function DealDetailPage() {
 
   if (!deal) {
     return (
-      <main className="min-h-screen bg-slate-950 px-6 py-10">
-        <p className="text-slate-400">Deal not found.</p>
-        <Link href="/" className="text-violet-400 text-sm mt-3 inline-block hover:text-violet-300 transition">
-          ← Back to deals
-        </Link>
+      <main className="min-h-screen bg-slate-950 px-4 py-10 md:px-6">
+        <div className="max-w-4xl mx-auto flex flex-col items-center justify-center rounded-3xl border border-white/8 bg-slate-900/80 px-6 py-16 text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-800/80 text-slate-500">
+            <SearchX size={26} />
+          </div>
+          <h1 className="text-xl font-extrabold tracking-tight text-white">Deal not found</h1>
+          <p className="mt-1.5 text-sm text-slate-400 max-w-xs">
+            This deal may have expired or been removed.
+          </p>
+          <Link
+            href="/"
+            className="mt-6 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 shadow-neon-violet focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+          >
+            <ArrowLeft size={14} /> Back to deals
+          </Link>
+        </div>
       </main>
     );
   }
@@ -360,18 +390,21 @@ export default function DealDetailPage() {
       <div className="max-w-4xl mx-auto px-3 py-5 md:px-6 md:py-8">
 
         {/* Back */}
-        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition mb-4">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 rounded-full text-sm text-slate-400 hover:text-slate-200 transition mb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+        >
           <ArrowLeft size={15} /> Back to deals
         </Link>
 
         {errorMsg && (
-          <p className="mb-4 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
+          <p className="mb-4 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3">
             {errorMsg}
           </p>
         )}
 
         {/* Main card */}
-        <div className="overflow-hidden rounded-2xl border border-white/8 bg-slate-900/80 shadow-2xl">
+        <div className="overflow-hidden rounded-2xl border border-white/8 bg-slate-900/80 shadow-card">
 
           {/* Image carousel */}
           {dealImages.length > 0 ? (
@@ -390,7 +423,7 @@ export default function DealDetailPage() {
                   <button
                     type="button"
                     onClick={() => setActiveImageIndex((prev) => (prev - 1 + dealImages.length) % dealImages.length)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/55 backdrop-blur-sm p-2 text-white hover:bg-black/75 transition"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/55 backdrop-blur-sm p-2 text-white transition hover:bg-black/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                     aria-label="Previous image"
                   >
                     <ChevronLeft size={16} />
@@ -398,7 +431,7 @@ export default function DealDetailPage() {
                   <button
                     type="button"
                     onClick={() => setActiveImageIndex((prev) => (prev + 1) % dealImages.length)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/55 backdrop-blur-sm p-2 text-white hover:bg-black/75 transition"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/55 backdrop-blur-sm p-2 text-white transition hover:bg-black/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                     aria-label="Next image"
                   >
                     <ChevronRight size={16} />
@@ -408,7 +441,8 @@ export default function DealDetailPage() {
                       <button
                         key={i}
                         onClick={() => setActiveImageIndex(i)}
-                        className={`rounded-full transition-all duration-300 ${i === activeImageIndex ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/40 hover:bg-white/60'}`}
+                        aria-label={`Show image ${i + 1} of ${dealImages.length}`}
+                        className={`rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 ${i === activeImageIndex ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/40 hover:bg-white/60'}`}
                       />
                     ))}
                   </div>
@@ -432,7 +466,7 @@ export default function DealDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="h-32 w-full bg-gradient-to-br from-violet-900/40 to-fuchsia-900/30 flex items-center justify-center">
+            <div className="h-32 w-full bg-slate-800/80 border-b border-white/5 flex items-center justify-center">
               <span className="text-7xl opacity-60">{catMeta.emoji}</span>
             </div>
           )}
@@ -440,7 +474,7 @@ export default function DealDetailPage() {
           <div className="p-5 md:p-7">
 
             {/* Title + badges */}
-            <h1 className="text-2xl font-bold text-white leading-tight md:text-3xl">{deal.title}</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-white leading-tight md:text-3xl">{deal.title}</h1>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {!dealImages.length && deal.category && (
                 <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${catMeta.bg} ${catMeta.color}`}>
@@ -471,22 +505,22 @@ export default function DealDetailPage() {
 
             {/* Pricing / Coupon card */}
             {(offerLine || deal.coupon_code) && (
-              <div className="mt-5 rounded-xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 via-fuchsia-500/5 to-transparent p-4">
+              <div className="mt-5 rounded-2xl border border-violet-500/20 bg-slate-800/80 p-4">
                 {offerLine && (
                   <p className="font-semibold text-violet-300 text-base">{offerLine}</p>
                 )}
                 {deal.coupon_code && (
                   <div className="mt-3 flex items-center gap-3">
-                    <div className="flex-1 rounded-lg border border-dashed border-violet-500/40 bg-violet-500/10 px-4 py-2.5 min-w-0">
+                    <div className="flex-1 rounded-xl border border-dashed border-violet-500/40 bg-violet-500/10 px-4 py-2.5 min-w-0">
                       <p className="text-[10px] text-violet-400 uppercase tracking-wider font-semibold mb-0.5">Coupon Code</p>
                       <p className="font-mono font-bold text-white tracking-widest text-sm truncate">{deal.coupon_code}</p>
                     </div>
                     <button
                       onClick={copyCoupon}
-                      className={`flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                      className={`flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 ${
                         copied
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-violet-600 text-white hover:bg-violet-500 shadow-neon-violet'
+                          : 'bg-violet-600 text-white hover:bg-violet-500'
                       }`}
                     >
                       {copied ? <><Check size={14} /> Copied!</> : <><Copy size={14} /> Copy</>}
@@ -501,14 +535,15 @@ export default function DealDetailPage() {
               <button
                 onClick={openDirections}
                 disabled={!deal.latitude || !deal.longitude}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition shadow-neon-violet disabled:opacity-40 disabled:shadow-none"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition shadow-neon-violet disabled:opacity-40 disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
               >
                 <Navigation size={14} /> Get Directions
               </button>
               <button
                 onClick={toggleSave}
                 disabled={saveLoading}
-                className={`inline-flex items-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 ${
+                aria-label={saved ? 'Remove from saved deals' : 'Save deal'}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 ${
                   saved
                     ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
                     : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
@@ -518,7 +553,7 @@ export default function DealDetailPage() {
               </button>
               <button
                 onClick={shareDeal}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10 transition"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
               >
                 <Share2 size={14} /> {shareCopied ? 'Link copied!' : 'Share'}
               </button>
@@ -527,7 +562,7 @@ export default function DealDetailPage() {
                   href={`https://wa.me/${deal.contact_whatsapp.replace(/\D/g, '')}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-400 hover:bg-emerald-500/25 transition"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-400 hover:bg-emerald-500/25 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                 >
                   <MessageCircleMore size={14} /> WhatsApp
                 </a>
@@ -535,7 +570,7 @@ export default function DealDetailPage() {
               {deal.contact_phone && (
                 <a
                   href={`tel:${deal.contact_phone}`}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10 transition"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                 >
                   <Phone size={14} /> Call
                 </a>
@@ -553,15 +588,17 @@ export default function DealDetailPage() {
                 )}
                 {[deal.area, deal.city].filter(Boolean).join(', ') || 'Location not set'}
               </span>
-              <span>👁 {deal.views || 0} views</span>
-              <span>🧭 {deal.clicks || 0} directions</span>
-              <span>📅 {deal.valid_till_date ? `Expires ${new Date(deal.valid_till_date).toLocaleDateString('en-IN')}` : 'No expiry'}</span>
+              <span className="inline-flex items-center gap-1.5"><Eye size={13} /> {deal.views || 0} views</span>
+              <span className="inline-flex items-center gap-1.5"><Navigation size={13} /> {deal.clicks || 0} directions</span>
+              <span className="inline-flex items-center gap-1.5">
+                <Calendar size={13} /> {deal.valid_till_date ? `Expires ${new Date(deal.valid_till_date).toLocaleDateString('en-IN')}` : 'No expiry'}
+              </span>
             </div>
 
             {/* Terms */}
             {deal.terms && (
-              <div className="mt-4 rounded-xl border border-white/6 bg-white/3 px-4 py-3">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1.5">Terms & Conditions</p>
+              <div className="mt-4 rounded-2xl border border-white/6 bg-white/3 px-4 py-3">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Terms & Conditions</p>
                 <p className="text-xs text-slate-400 leading-relaxed">{deal.terms}</p>
               </div>
             )}
@@ -583,14 +620,14 @@ export default function DealDetailPage() {
               <button
                 onClick={submitClaim}
                 disabled={claiming}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-3 py-2 text-xs font-medium text-slate-400 hover:bg-white/10 hover:text-slate-200 transition disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-3 py-2 text-xs font-medium text-slate-400 hover:bg-white/10 hover:text-slate-200 transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
               >
                 <Store size={12} /> {claiming ? 'Submitting...' : 'Claim this business'}
               </button>
               <button
                 onClick={reportDeal}
                 disabled={reporting}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-500/20 transition disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-500/20 transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
               >
                 <Flag size={12} /> {reporting ? 'Reporting...' : 'Report deal'}
               </button>
@@ -600,18 +637,25 @@ export default function DealDetailPage() {
 
         {/* More like this nearby */}
         {similarDeals.length > 0 && (
-          <section className="mt-6">
+          <section className="mt-8">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[15px] font-extrabold text-white">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {catMeta.emoji} More {catLabel} deals{coords ? ' near you' : ''}
               </h2>
-              <span className="text-xs text-slate-600">{similarDeals.length} deals</span>
+              <span className="text-xs text-slate-500">{similarDeals.length} deals</span>
             </div>
             <div className="relative -mx-3 md:-mx-6">
               <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <div className="flex gap-3 px-3 md:px-6" style={{ width: 'max-content' }}>
-                  {similarDeals.map((d) => (
-                    <MiniDealCard key={d.id} deal={d} userLat={coords?.lat} userLng={coords?.lng} />
+                  {similarDeals.map((d, i) => (
+                    <motion.div
+                      key={d.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeOut', delay: i * 0.05 }}
+                    >
+                      <MiniDealCard deal={d} userLat={coords?.lat} userLng={coords?.lng} />
+                    </motion.div>
                   ))}
                   <div className="w-2 shrink-0" />
                 </div>
@@ -622,7 +666,7 @@ export default function DealDetailPage() {
         )}
 
         {/* Write review */}
-        <div className="mt-4 rounded-2xl border border-white/8 bg-slate-900/80 p-5 md:p-7">
+        <div className="mt-6 rounded-2xl border border-white/8 bg-slate-900/80 p-5 md:p-7">
           <h2 className="text-base font-semibold text-white mb-1 md:text-lg">Write a Review</h2>
           <p className="text-xs text-slate-500 mb-4">
             {userId ? 'Share your experience with this deal.' : 'Sign in to leave a review.'}
@@ -634,7 +678,8 @@ export default function DealDetailPage() {
                   key={star}
                   type="button"
                   onClick={() => setMyRating(star)}
-                  className="text-3xl transition-transform hover:scale-125 leading-none"
+                  aria-label={`Rate ${star} out of 5 stars`}
+                  className="rounded-full text-3xl transition-transform hover:scale-125 leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                   style={{ color: star <= myRating ? '#f59e0b' : '#1e293b' }}
                 >
                   ★
@@ -649,13 +694,13 @@ export default function DealDetailPage() {
               value={myComment}
               onChange={(e) => setMyComment(e.target.value)}
               placeholder="Share your experience (optional)"
-              className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 leading-relaxed outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition resize-none"
+              className="w-full rounded-2xl border border-white/10 bg-slate-800/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 leading-relaxed outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition resize-none"
             />
 
             <button
               type="submit"
               disabled={submitting}
-              className="mt-3 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-50"
+              className="mt-3 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
             >
               {submitting ? 'Submitting…' : 'Submit Review'}
             </button>
@@ -683,17 +728,26 @@ export default function DealDetailPage() {
           </div>
 
           {reviews.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-2">💬</div>
-              <p className="text-slate-500 text-sm">No reviews yet. Be the first to review!</p>
+            <div className="flex flex-col items-center py-10 text-center">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-800/80 text-slate-500">
+                <MessageCircleMore size={22} />
+              </div>
+              <p className="text-slate-400 text-sm">No reviews yet.</p>
+              <p className="text-slate-500 text-xs mt-0.5">Be the first to share your experience.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {reviews.map((review) => (
-                <div key={review.id} className="rounded-xl border border-white/6 bg-slate-800/40 p-4">
+              {reviews.map((review, i) => (
+                <motion.div
+                  key={review.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeOut', delay: i * 0.05 }}
+                  className="rounded-2xl border border-white/6 bg-slate-800/40 p-4"
+                >
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-violet-600/80 flex items-center justify-center text-xs font-bold text-white shrink-0">
                         {review.user_id.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex gap-0.5">
@@ -713,8 +767,9 @@ export default function DealDetailPage() {
                             reason: 'review_abuse_or_spam',
                           });
                         }}
-                        className="text-slate-600 hover:text-rose-400 transition"
+                        aria-label="Report review"
                         title="Report review"
+                        className="rounded-full text-slate-600 hover:text-rose-400 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
                       >
                         <Flag size={12} />
                       </button>
@@ -725,7 +780,7 @@ export default function DealDetailPage() {
                       {review.comment}
                     </p>
                   )}
-                </div>
+                </motion.div>
               ))}
             </div>
           )}

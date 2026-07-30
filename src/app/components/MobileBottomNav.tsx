@@ -75,24 +75,24 @@ export default function MobileBottomNav() {
         {/* ── Home ── */}
         <NavTab href="/" label="Home" icon={Home} active={isActive('/')} />
 
-        {/* ── Map — gradient pill, always stands out ── */}
+        {/* ── Map — gradient reserved for the active state ── */}
         <Link
           href="/map"
           onClick={() => void trackEvent('mobile_nav_click', { href: '/map', label: 'Map' })}
-          className="flex flex-1 flex-col items-center gap-1 py-1 select-none active:opacity-60 transition-opacity duration-75"
+          className="flex flex-1 flex-col items-center gap-1 py-1 select-none active:opacity-60 transition-opacity duration-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-xl"
         >
           <div
-            className={`flex h-11 w-11 items-center justify-center rounded-[16px] transition-all duration-200 ${
+            className={`flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-200 ${
               isActive('/map')
-                ? 'bg-gradient-to-br from-violet-400 to-fuchsia-500 shadow-[0_4px_20px_rgba(139,92,246,0.65)] scale-110'
-                : 'bg-gradient-to-br from-violet-600/80 to-fuchsia-600/80 shadow-[0_2px_14px_rgba(139,92,246,0.35)]'
+                ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-neon-violet scale-110'
+                : 'border border-white/10 bg-slate-800/80'
             }`}
           >
-            <MapPinned size={22} className="text-white" />
+            <MapPinned size={22} className={isActive('/map') ? 'text-white' : 'text-violet-400'} />
           </div>
           <span
             className={`text-[10px] font-bold transition-colors duration-200 ${
-              isActive('/map') ? 'text-violet-400' : 'text-slate-400'
+              isActive('/map') ? 'text-violet-400' : 'text-slate-500'
             }`}
           >
             Map
@@ -116,15 +116,16 @@ export default function MobileBottomNav() {
             void trackEvent('mobile_logout', { source: 'mobile_bottom_nav' });
             router.push('/');
           }}
-          className="flex flex-1 flex-col items-center gap-1 py-1 select-none active:opacity-60 transition-opacity duration-75"
+          aria-label={user ? 'Sign out' : 'Sign up'}
+          className="flex flex-1 flex-col items-center gap-1 py-1 select-none active:opacity-60 transition-opacity duration-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-xl"
         >
           {user ? (
             <>
               <div
-                className={`flex h-9 w-9 items-center justify-center rounded-[14px] text-[13px] font-extrabold text-white shadow-md transition-all duration-200 ${
+                className={`flex h-9 w-9 items-center justify-center rounded-2xl border text-[13px] font-extrabold transition-all duration-200 ${
                   isBusiness
-                    ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-[0_2px_10px_rgba(139,92,246,0.45)]'
-                    : 'bg-gradient-to-br from-emerald-400 to-teal-500 shadow-[0_2px_10px_rgba(52,211,153,0.35)]'
+                    ? 'border-violet-500/30 bg-violet-500/15 text-violet-300'
+                    : 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
                 }`}
               >
                 {initial}
@@ -133,7 +134,7 @@ export default function MobileBottomNav() {
             </>
           ) : (
             <>
-              <div className="flex h-9 w-9 items-center justify-center rounded-[14px] border border-white/10 bg-white/5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-slate-800/80">
                 <UserCircle2 size={20} className="text-slate-500" />
               </div>
               <span className="text-[10px] font-bold text-slate-500">Sign Up</span>
@@ -161,10 +162,10 @@ function NavTab({
     <Link
       href={href}
       onClick={() => void trackEvent('mobile_nav_click', { href, label })}
-      className="flex flex-1 flex-col items-center gap-1 py-1 select-none active:opacity-60 transition-opacity duration-75"
+      className="flex flex-1 flex-col items-center gap-1 py-1 select-none active:opacity-60 transition-opacity duration-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-xl"
     >
       <div
-        className={`flex h-9 w-9 items-center justify-center rounded-[14px] transition-all duration-200 ${
+        className={`flex h-9 w-9 items-center justify-center rounded-2xl transition-all duration-200 ${
           active ? 'bg-violet-500/20 scale-110' : 'scale-100'
         }`}
       >

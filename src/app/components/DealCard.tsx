@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 import { supabase } from '@/app/lib/supabase';
 import {
   MapPin, Eye, MousePointerClick, Navigation, Bookmark, BookmarkCheck,
@@ -335,9 +336,15 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
 
   return (
     <>
-      <div
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
         onClick={openDeal}
-        className="card-press group relative cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-slate-900/95 shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:border-violet-500/30 hover:shadow-card-hover active:scale-[0.97] active:opacity-90"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDeal(); } }}
+        className="card-press group relative cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-slate-900/95 shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:border-violet-500/30 hover:shadow-card-hover active:scale-[0.97] active:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
       >
         {/* Subtle inner top highlight */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
@@ -358,14 +365,14 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
 
             {/* Discount badge */}
             {discountPct && (
-              <span className="absolute left-3 top-3 flex items-center gap-1 rounded-xl bg-rose-500/90 px-2.5 py-1 text-xs font-extrabold text-white shadow-neon-rose backdrop-blur-sm border border-rose-400/30">
+              <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-rose-500/90 px-2.5 py-1 text-xs font-extrabold text-white shadow-neon-rose backdrop-blur-sm border border-rose-400/30">
                 {discountPct}% OFF
               </span>
             )}
 
             {/* Heat badge */}
             {heatBadge && (
-              <span className={`absolute right-3 top-3 flex items-center gap-1 rounded-xl px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm ${heatBadge.className}`}>
+              <span className={`absolute right-3 top-3 flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm ${heatBadge.className}`}>
                 {heatBadge.icon} {heatBadge.label}
               </span>
             )}
@@ -377,7 +384,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
                   type="button"
                   aria-label="Previous image"
                   onClick={(e) => { e.stopPropagation(); setActiveImageIndex((p) => (p - 1 + imageGallery.length) % imageGallery.length); }}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white backdrop-blur-sm transition hover:bg-black/70"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white backdrop-blur-sm transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                 >
                   <ChevronLeft size={13} />
                 </button>
@@ -385,7 +392,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
                   type="button"
                   aria-label="Next image"
                   onClick={(e) => { e.stopPropagation(); setActiveImageIndex((p) => (p + 1) % imageGallery.length); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white backdrop-blur-sm transition hover:bg-black/70"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white backdrop-blur-sm transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                 >
                   <ChevronRight size={13} />
                 </button>
@@ -396,8 +403,8 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
             )}
           </div>
         ) : (
-          <div className="flex h-48 w-full items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900 md:h-52">
-            <div className="flex flex-col items-center gap-2 text-slate-600">
+          <div className="flex h-48 w-full items-center justify-center bg-slate-800/60 md:h-52">
+            <div className="flex flex-col items-center gap-2 text-slate-500">
               <div className="h-10 w-10 rounded-xl bg-slate-700/60 flex items-center justify-center">
                 <Sparkles size={18} />
               </div>
@@ -413,7 +420,8 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
             <button
               onClick={toggleSave}
               title={saved ? 'Remove from saved' : 'Save this deal'}
-              className={`rounded-xl p-2 transition-all duration-200 ${
+              aria-label={saved ? 'Remove from saved' : 'Save this deal'}
+              className={`rounded-full p-2 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 ${
                 saved
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 scale-110 shadow-neon-emerald'
                   : 'bg-white/5 text-slate-500 border border-white/10 hover:bg-emerald-500/15 hover:text-emerald-400 hover:border-emerald-500/30'
@@ -424,7 +432,8 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
             <button
               onClick={openDirections}
               title={canNavigate ? 'Get directions' : 'No location saved'}
-              className={`rounded-xl p-2 transition-all duration-200 border ${
+              aria-label={canNavigate ? 'Get directions' : 'No location saved'}
+              className={`rounded-full p-2 transition-all duration-200 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 ${
                 canNavigate
                   ? 'bg-white/5 border-white/10 text-slate-500 hover:bg-violet-500/15 hover:text-violet-400 hover:border-violet-500/30'
                   : 'bg-slate-800/40 border-white/5 text-slate-700 cursor-not-allowed'
@@ -484,7 +493,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
                 {distanceLabel}
               </span>
             )}
-            <p className={`truncate text-xs ${canNavigate ? 'text-slate-400' : 'italic text-slate-600'}`}>{label}</p>
+            <p className={`truncate text-xs ${canNavigate ? 'text-slate-400' : 'italic text-slate-500'}`}>{label}</p>
           </div>
 
           {dirError && (
@@ -494,7 +503,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
           )}
 
           {/* Validity */}
-          <p className="mt-1 text-[11px] text-slate-600">
+          <p className="mt-1 text-[11px] text-slate-500">
             Valid till{' '}
             {deal.valid_till_date
               ? new Date(deal.valid_till_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -507,7 +516,8 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
               <button
                 key={star}
                 onClick={(e) => submitRating(e, star)}
-                className="text-base transition-transform hover:scale-125 md:text-lg"
+                aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                className="rounded-full text-base transition-transform hover:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 md:text-lg"
                 style={{ color: star <= Math.round(deal.rating || 0) ? '#fbbf24' : '#1e293b' }}
               >
                 ★
@@ -521,7 +531,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
           {/* Write review */}
           <button
             onClick={(e) => { e.stopPropagation(); setReviewOpen(true); }}
-            className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-slate-500 transition hover:text-violet-400"
+            className="mt-1.5 inline-flex items-center gap-1 rounded-full text-xs font-medium text-slate-500 transition hover:text-violet-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
           >
             <MessageSquare size={12} /> Write review
           </button>
@@ -530,20 +540,20 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
             <button
               onClick={shareDeal}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 transition-all hover:border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-400"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 transition-all hover:border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
             >
               <Share2 size={11} /> {shareCopied ? 'Copied!' : 'Share'}
             </button>
             <button
               onClick={shareOnWhatsApp}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-400"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
             >
               <MessageCircleMore size={11} /> WhatsApp
             </button>
             {deal.coupon_code && (
               <button
                 onClick={copyCoupon}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-medium text-amber-400 transition-all hover:bg-amber-500/20"
+                className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-medium text-amber-400 transition-all hover:bg-amber-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
               >
                 <Copy size={11} /> {copied ? 'Copied!' : `${deal.coupon_code}`}
               </button>
@@ -554,7 +564,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
                 href={`https://wa.me/${deal.contact_whatsapp.replace(/\D/g, '')}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-400 transition-all hover:bg-emerald-500/20"
+                className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-400 transition-all hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
               >
                 <MessageCircleMore size={11} /> WA
               </a>
@@ -563,7 +573,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
               <a
                 onClick={(e) => e.stopPropagation()}
                 href={`tel:${deal.contact_phone}`}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 transition-all hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-sky-400"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 transition-all hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
               >
                 <Phone size={11} /> Call
               </a>
@@ -571,7 +581,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
           </div>
 
           {/* Engagement */}
-          <div className="mt-3 flex items-center gap-3 border-t border-white/5 pt-3 text-[11px] text-slate-600">
+          <div className="mt-3 flex items-center gap-3 border-t border-white/5 pt-3 text-[11px] text-slate-500">
             <span className="flex items-center gap-1"><Eye size={11} /> {fmtNum(deal.views || 0)}</span>
             <span className="flex items-center gap-1"><MousePointerClick size={11} /> {fmtNum(deal.clicks || 0)}</span>
             {deal.updated_at && (
@@ -581,7 +591,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Review Modal */}
       {reviewOpen && (
@@ -589,10 +599,13 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm p-4 sm:items-center"
           onClick={() => setReviewOpen(false)}
         >
-          <form
+          <motion.form
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
             onSubmit={submitReview}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 shadow-[0_24px_80px_rgba(0,0,0,0.9)] backdrop-blur-2xl"
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-slate-900/95 shadow-[0_24px_80px_rgba(0,0,0,0.9)] backdrop-blur-2xl"
           >
             {/* Modal header */}
             <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
@@ -603,7 +616,8 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
               <button
                 type="button"
                 onClick={() => setReviewOpen(false)}
-                className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-400 transition hover:text-white"
+                aria-label="Close review dialog"
+                className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
               >
                 <X size={14} />
               </button>
@@ -617,7 +631,8 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
                     type="button"
                     key={star}
                     onClick={() => setReviewRating(star)}
-                    className="text-3xl transition-all duration-150 hover:scale-125"
+                    aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                    className="rounded-full text-3xl transition-all duration-150 hover:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                     style={{ color: star <= reviewRating ? '#fbbf24' : '#1e293b', filter: star <= reviewRating ? 'drop-shadow(0 0 6px rgba(251,191,36,0.6))' : 'none' }}
                   >
                     ★
@@ -626,33 +641,33 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
               </div>
 
               <textarea
-                className="w-full resize-none rounded-xl border border-white/10 bg-slate-800/80 p-3.5 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
+                className="w-full resize-none rounded-2xl border border-white/10 bg-slate-800/80 p-3.5 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 focus-visible:ring-2 focus-visible:ring-violet-500/40"
                 rows={4}
                 maxLength={400}
                 placeholder="Share your experience (optional)…"
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
               />
-              <p className="mt-1 text-right text-[10px] text-slate-600">{reviewComment.length}/400</p>
+              <p className="mt-1 text-right text-[10px] text-slate-500">{reviewComment.length}/400</p>
 
               <div className="mt-3 flex gap-2.5">
                 <button
                   type="button"
                   onClick={() => setReviewOpen(false)}
-                  className="flex-1 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-medium text-slate-400 transition hover:bg-white/10 hover:text-white"
+                  className="flex-1 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm font-medium text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 disabled:opacity-50"
+                  className="flex-1 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                 >
                   {submitting ? 'Submitting…' : 'Submit Review'}
                 </button>
               </div>
             </div>
-          </form>
+          </motion.form>
         </div>
       )}
     </>

@@ -258,8 +258,8 @@ function LocationPicker({
   return (
     <div className="space-y-2">
       <div className="relative">
-        <div className="flex items-center gap-2 w-full p-4 border border-white/10 rounded-xl focus-within:ring-2 focus-within:ring-purple-500 bg-slate-800/80">
-          <MapPin size={18} className="text-purple-400 shrink-0" />
+        <div className="flex items-center gap-2 w-full p-4 border border-white/10 rounded-2xl focus-within:ring-2 focus-within:ring-violet-500/40 bg-slate-800/80">
+          <MapPin size={18} className="text-violet-400 shrink-0" />
           <input
             className="w-full outline-none text-sm bg-transparent text-white placeholder:text-slate-500"
             style={{ border: 'none', padding: 0, borderRadius: 0, boxShadow: 'none' }}
@@ -271,14 +271,14 @@ function LocationPicker({
         </div>
 
         {suggestions.length > 0 && (
-          <ul className="absolute z-50 top-full mt-1 w-full bg-slate-800 border border-white/10 rounded-xl shadow-xl overflow-hidden">
+          <ul className="absolute z-50 top-full mt-1 w-full bg-slate-800 border border-white/10 rounded-2xl shadow-xl overflow-hidden">
             {suggestions.map((s) => {
               const { area, city } = parseMapboxFeature(s);
               const subtitle = [area, city].filter(Boolean).join(', ') || s.place_name;
               return (
                 <li key={s.id} onClick={() => selectSuggestion(s)}
                   className="px-4 py-3 text-sm hover:bg-violet-500/15 cursor-pointer border-b border-white/6 last:border-0 flex items-start gap-2">
-                  <MapPin size={13} className="text-purple-400 mt-0.5 shrink-0" />
+                  <MapPin size={13} className="text-violet-400 mt-0.5 shrink-0" />
                   <div className="min-w-0">
                     <span className="font-medium block truncate text-white">{s.text}</span>
                     <span className="text-slate-400 text-xs truncate block">{subtitle}</span>
@@ -291,10 +291,10 @@ function LocationPicker({
       </div>
 
       <button type="button" onClick={useCurrentLocation} disabled={geoLoading}
-        className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition-all w-full justify-center
-          ${geoLoading ? 'bg-slate-800/50 text-slate-500 border-white/8 cursor-wait'
-            : 'bg-slate-800/50 border-purple-500/40 text-purple-400 hover:bg-purple-500/15 hover:border-purple-500 active:scale-95'}`}>
-        <LocateFixed size={16} className={geoLoading ? 'animate-spin text-purple-400' : 'text-purple-500'} />
+        className={`flex items-center gap-2 px-4 py-3 rounded-2xl border text-sm font-medium transition-all w-full justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
+          ${geoLoading ? 'bg-slate-800/50 text-slate-500 border-white/10 cursor-wait'
+            : 'bg-slate-800/50 border-violet-500/40 text-violet-400 hover:bg-violet-500/15 hover:border-violet-500 active:scale-95'}`}>
+        <LocateFixed size={16} className={geoLoading ? 'animate-spin text-violet-400' : 'text-violet-500'} />
         {geoLoading ? 'Detecting location…' : '📡 Use my current location'}
       </button>
 
@@ -324,8 +324,8 @@ function LocationPicker({
 
       {value.lat && geoStatus !== 'denied' && (
         <div className="flex items-center gap-2 ml-1">
-          <span className="w-2 h-2 rounded-full bg-green-500 inline-block shrink-0" />
-          <p className="text-xs text-green-700 font-medium">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block shrink-0" />
+          <p className="text-xs text-emerald-400 font-medium">
             {value.area && value.city
               ? `📍 ${value.area}, ${value.city}`
               : value.area || value.city
@@ -367,10 +367,11 @@ function EditLocationModal({ deal, onSave, onClose }: { deal: Deal; onSave: () =
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-        className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+      <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        className="bg-slate-900 border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-card-hover">
         <div className="flex items-center gap-2 mb-1">
-          <MapPin size={18} className="text-purple-400" />
+          <MapPin size={18} className="text-violet-400" />
           <h2 className="text-lg font-semibold text-white">Set Location</h2>
         </div>
         <p className="text-sm text-slate-400 mb-4">
@@ -379,10 +380,10 @@ function EditLocationModal({ deal, onSave, onClose }: { deal: Deal; onSave: () =
         <LocationPicker value={location} onChange={setLocation} />
         <div className="flex gap-3 mt-5">
           <button onClick={handleSave} disabled={saving || !location.lat}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-medium disabled:opacity-50 hover:opacity-90 transition">
-            {saving ? 'Saving…' : '✓ Save Location'}
+            className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white py-3 rounded-2xl font-medium shadow-neon-violet disabled:opacity-50 disabled:shadow-none hover:opacity-90 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
+            {saving ? 'Saving…' : 'Save Location'}
           </button>
-          <button onClick={onClose} className="flex-1 border border-white/10 py-3 rounded-xl text-slate-300 hover:bg-white/5 transition">
+          <button onClick={onClose} className="flex-1 border border-white/10 py-3 rounded-2xl text-slate-300 hover:bg-white/5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
             Cancel
           </button>
         </div>
@@ -516,6 +517,7 @@ export default function BusinessDashboard() {
   const [validHours, setValidHours] = useState('');
   const [ageRestricted, setAgeRestricted] = useState(false);
   const [myDeals, setMyDeals] = useState<Deal[]>([]);
+  const [dealsLoaded, setDealsLoaded] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [editImageFiles, setEditImageFiles] = useState<File[]>([]);
   const [editingLocation, setEditingLocation] = useState<Deal | null>(null);
@@ -706,7 +708,7 @@ export default function BusinessDashboard() {
   };
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { void fetchMyDeals(); }, []);
+  useEffect(() => { void fetchMyDeals().finally(() => setDealsLoaded(true)); }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void fetchOwnerAnalytics(myDeals); }, [myDeals]);
@@ -994,11 +996,11 @@ export default function BusinessDashboard() {
     <main className="relative min-h-screen overflow-hidden bg-slate-950 px-1 pb-16 md:px-4">
       <div className="pointer-events-none absolute -top-24 -left-20 h-72 w-72 rounded-full bg-fuchsia-500/8 blur-3xl" />
       <div className="pointer-events-none absolute top-10 right-0 h-80 w-80 rounded-full bg-indigo-500/8 blur-3xl" />
-      <div className="relative mb-6 mt-3 overflow-hidden rounded-[1.6rem] border border-indigo-200/70 shadow-[0_18px_45px_-20px_rgba(79,70,229,0.45)] md:mb-8 md:mt-5 md:rounded-[2rem]">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 opacity-95" />
+      <div className="relative mb-6 mt-3 overflow-hidden rounded-3xl border border-white/10 shadow-neon-violet md:mb-8 md:mt-5">
+        <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-indigo-600 to-fuchsia-600" />
         <div className="relative p-5 text-white md:p-10">
-          <h1 className="text-3xl font-bold md:text-4xl">Business Dashboard 🚀</h1>
-          <p className="mt-2 max-w-2xl text-sm text-white/90 md:mt-3 md:text-base">Manage your storefront profile, publish offers, and keep every deal map-ready.</p>
+          <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Business Dashboard</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/90 md:mt-3 md:text-base">Manage your storefront profile, publish offers, and keep every deal map-ready.</p>
         </div>
       </div>
 
@@ -1010,20 +1012,26 @@ export default function BusinessDashboard() {
           { label: 'Avg CTR', value: `${avgCtr}%` },
           { label: 'Deal Health', value: `${avgHealth}%` },
         ].map((item, i) => (
-          <motion.div key={i} whileHover={{ scale: 1.03 }} className="rounded-2xl border border-white/8 bg-slate-900/80 p-4 shadow-lg backdrop-blur md:p-6">
-            <p className="text-sm text-slate-400">{item.label}</p>
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut', delay: i * 0.05 }}
+            className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 shadow-card md:p-6"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item.label}</p>
             <h2 className="mt-1 text-2xl font-bold text-white md:mt-2 md:text-3xl">{item.value}</h2>
           </motion.div>
         ))}
       </div>
 
-      <section className="mb-6 rounded-2xl border border-white/8 bg-slate-900/80 p-4 shadow-xl backdrop-blur md:mb-8 md:p-6">
+      <section className="mb-6 rounded-2xl border border-white/10 bg-slate-900/80 p-4 shadow-card backdrop-blur md:mb-8 md:p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-white md:text-xl">
             <BarChart3 size={18} />
             Owner Analytics
           </h2>
-          <p className="text-xs text-slate-500">Last 30 days</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Last 30 days</p>
         </div>
 
         {analyticsError && (
@@ -1031,30 +1039,30 @@ export default function BusinessDashboard() {
         )}
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="rounded-xl border border-white/8 bg-slate-800/50 p-3">
+          <div className="rounded-2xl border border-white/10 bg-slate-800/50 p-3">
             <p className="text-xs text-slate-400">Deal opens</p>
             <p className="mt-1 text-2xl font-semibold text-white">{analyticsSummary.opens}</p>
           </div>
-          <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/10 p-3">
+          <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-3">
             <p className="inline-flex items-center gap-1 text-xs text-indigo-400"><Navigation size={12} /> Directions</p>
             <p className="mt-1 text-2xl font-semibold text-white">{analyticsSummary.directions}</p>
           </div>
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3">
             <p className="inline-flex items-center gap-1 text-xs text-emerald-400"><BookmarkCheck size={12} /> Saves</p>
             <p className="mt-1 text-2xl font-semibold text-white">{analyticsSummary.saves}</p>
           </div>
-          <div className="rounded-xl border border-violet-500/20 bg-violet-500/10 p-3">
+          <div className="rounded-2xl border border-violet-500/20 bg-violet-500/10 p-3">
             <p className="inline-flex items-center gap-1 text-xs text-violet-400"><Share2 size={12} /> Shares</p>
             <p className="mt-1 text-2xl font-semibold text-white">{analyticsSummary.shares}</p>
           </div>
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3">
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3">
             <p className="inline-flex items-center gap-1 text-xs text-amber-400"><MessageSquare size={12} /> Reviews</p>
             <p className="mt-1 text-2xl font-semibold text-white">{analyticsSummary.reviews}</p>
           </div>
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-xl border border-white/8">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto_auto_auto] gap-2 border-b border-white/8 bg-slate-800/50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto_auto_auto] gap-2 border-b border-white/10 bg-slate-800/50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
             <span>Top deal</span>
             <span>Opens</span>
             <span>Dir</span>
@@ -1063,20 +1071,33 @@ export default function BusinessDashboard() {
             <span>Reviews</span>
           </div>
           {analyticsLoading ? (
-            <p className="px-3 py-3 text-sm text-slate-500">Loading analytics...</p>
+            <div className="space-y-2 p-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-6 w-full animate-pulse rounded-lg bg-slate-800/60" />
+              ))}
+            </div>
           ) : topAnalyticsDeals.length ? (
-            topAnalyticsDeals.map((item) => (
-              <div key={`analytics-${item.dealId}`} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto_auto_auto] gap-2 border-b border-white/5 px-3 py-2 text-sm last:border-0">
+            topAnalyticsDeals.map((item, i) => (
+              <motion.div
+                key={`analytics-${item.dealId}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, ease: 'easeOut', delay: i * 0.05 }}
+                className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto_auto_auto] gap-2 border-b border-white/5 px-3 py-2 text-sm last:border-0"
+              >
                 <span className="truncate text-slate-200">{item.title}</span>
                 <span className="text-slate-400">{item.opens}</span>
                 <span className="text-slate-400">{item.directions}</span>
                 <span className="text-slate-400">{item.saves}</span>
                 <span className="text-slate-400">{item.shares}</span>
                 <span className="text-slate-400">{item.reviews}</span>
-              </div>
+              </motion.div>
             ))
           ) : (
-            <p className="px-3 py-3 text-sm text-slate-500">No analytics events yet. Interactions will appear here automatically.</p>
+            <div className="flex flex-col items-center gap-2 px-3 py-8 text-center">
+              <BarChart3 size={22} className="text-slate-600" />
+              <p className="text-sm text-slate-500">No analytics events yet. Interactions will appear here automatically.</p>
+            </div>
           )}
         </div>
       </section>
@@ -1106,39 +1127,39 @@ export default function BusinessDashboard() {
         )}
       </AnimatePresence>
 
-      <form onSubmit={saveBusinessProfile} className="mb-6 rounded-2xl border border-white/8 bg-slate-900/80 p-4 shadow-xl backdrop-blur md:mb-8 md:p-8 [&_input]:bg-slate-800/80 [&_input]:text-white [&_textarea]:bg-slate-800/80 [&_textarea]:text-white [&_select]:bg-slate-800/80 [&_select]:text-white">
+      <form onSubmit={saveBusinessProfile} className="mb-6 rounded-2xl border border-white/10 bg-slate-900/80 p-4 shadow-card backdrop-blur md:mb-8 md:p-8 [&_input]:bg-slate-800/80 [&_input]:text-white [&_textarea]:bg-slate-800/80 [&_textarea]:text-white [&_select]:bg-slate-800/80 [&_select]:text-white">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white md:mb-6 md:text-xl">
           <Store size={18} /> Business Profile
         </h2>
         <div className="grid md:grid-cols-2 gap-4 mb-4">
-          <input className="w-full p-4 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500"
+          <input className="w-full p-4 border border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500"
             placeholder="Shop Name" value={shopName} onChange={(e) => setShopName(e.target.value)} />
           <div className="relative">
             <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input className="w-full p-4 pl-10 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500"
+            <input className="w-full p-4 pl-10 border border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500"
               placeholder="Phone Number" value={shopPhone} onChange={(e) => setShopPhone(e.target.value)} />
           </div>
-          <input className="w-full p-4 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500"
+          <input className="w-full p-4 border border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500"
             placeholder="WhatsApp Number" value={shopWhatsapp} onChange={(e) => setShopWhatsapp(e.target.value)} />
           <div className="relative">
             <Globe size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input className="w-full p-4 pl-10 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500"
+            <input className="w-full p-4 pl-10 border border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500"
               placeholder="Website URL" value={shopWebsite} onChange={(e) => setShopWebsite(e.target.value)} />
           </div>
           <div className="md:col-span-2 relative">
             <AtSign size={15} className="absolute left-3 top-5 text-slate-500" />
-            <input className="w-full p-4 pl-10 border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500"
+            <input className="w-full p-4 pl-10 border border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500"
               placeholder="Instagram handle or URL" value={shopInstagram} onChange={(e) => setShopInstagram(e.target.value)} />
           </div>
         </div>
-        <textarea className="w-full p-4 border border-white/10 rounded-xl mb-4 focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500"
+        <textarea className="w-full p-4 border border-white/10 rounded-2xl mb-4 focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500"
           placeholder="About your shop (services, timings, specialties)"
           value={shopAbout}
           onChange={(e) => setShopAbout(e.target.value)}
         />
         <div className="flex items-center gap-3">
           <button disabled={profileSaving}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2.5 px-5 rounded-xl font-medium disabled:opacity-60">
+            className="bg-violet-600 text-white py-2.5 px-5 rounded-2xl font-medium transition-colors hover:bg-violet-500 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
             {profileSaving ? 'Saving…' : 'Save Profile'}
           </button>
           {profileMsg && <p className="text-sm text-slate-400">{profileMsg}</p>}
@@ -1163,49 +1184,49 @@ export default function BusinessDashboard() {
       )}
 
       {/* ADD DEAL FORM */}
-      <form onSubmit={handleAddDeal} className="mb-8 rounded-2xl border border-white/8 bg-slate-900/80 p-4 shadow-xl backdrop-blur md:mb-10 md:p-8 [&_input]:bg-slate-800/80 [&_input]:text-white [&_textarea]:bg-slate-800/80 [&_textarea]:text-white [&_select]:bg-slate-800/80 [&_select]:text-white">
+      <form onSubmit={handleAddDeal} className="mb-8 rounded-2xl border border-white/10 bg-slate-900/80 p-4 shadow-card backdrop-blur md:mb-10 md:p-8 [&_input]:bg-slate-800/80 [&_input]:text-white [&_textarea]:bg-slate-800/80 [&_textarea]:text-white [&_select]:bg-slate-800/80 [&_select]:text-white">
         <h2 className="text-xl font-semibold text-white mb-4 flex gap-2 items-center">
           <Plus size={18} /> Add New Deal
         </h2>
 
         {addDealError && (
-          <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
+          <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
             <span className="shrink-0 mt-0.5">⚠</span>
             <span>{addDealError}</span>
           </div>
         )}
 
-        <input className="w-full p-4 border border-white/10 rounded-xl mb-4 focus:ring-2 focus:ring-purple-500 outline-none placeholder:text-slate-500"
+        <input className="w-full p-4 border border-white/10 rounded-2xl mb-4 focus:ring-2 focus:ring-violet-500 outline-none placeholder:text-slate-500"
           placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-        <textarea className="w-full p-4 border border-white/10 rounded-xl mb-4 focus:ring-2 focus:ring-purple-500 outline-none placeholder:text-slate-500"
+        <textarea className="w-full p-4 border border-white/10 rounded-2xl mb-4 focus:ring-2 focus:ring-violet-500 outline-none placeholder:text-slate-500"
           placeholder="What is included in this deal?" value={description} onChange={(e) => setDescription(e.target.value)} />
 
         <div className="grid md:grid-cols-2 gap-4 mb-4">
           <div className="relative">
             <BadgePercent size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input className="w-full p-4 pl-10 border border-white/10 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none placeholder:text-slate-500"
+            <input className="w-full p-4 pl-10 border border-white/10 rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none placeholder:text-slate-500"
               placeholder="Discount (e.g. 40% OFF)" value={discountLabel} onChange={(e) => setDiscountLabel(e.target.value)} />
           </div>
           <div className="relative">
             <Ticket size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input className="w-full p-4 pl-10 border border-white/10 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none placeholder:text-slate-500"
+            <input className="w-full p-4 pl-10 border border-white/10 rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none placeholder:text-slate-500"
               placeholder="Coupon Code (optional)" value={couponCode} onChange={(e) => setCouponCode(e.target.value)} />
           </div>
-          <input className="w-full p-4 border border-white/10 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none placeholder:text-slate-500"
+          <input className="w-full p-4 border border-white/10 rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none placeholder:text-slate-500"
             placeholder="Offer Price (e.g. ₹499)" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} />
-          <input className="w-full p-4 border border-white/10 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none placeholder:text-slate-500"
+          <input className="w-full p-4 border border-white/10 rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none placeholder:text-slate-500"
             placeholder="Original Price (e.g. ₹999)" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} />
-          <input className="w-full p-4 border border-white/10 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none placeholder:text-slate-500"
+          <input className="w-full p-4 border border-white/10 rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none placeholder:text-slate-500"
             placeholder={`Deal contact phone (default: ${shopPhone || 'business phone'})`}
             value={dealContactPhone}
             onChange={(e) => setDealContactPhone(e.target.value)} />
-          <input className="w-full p-4 border border-white/10 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none placeholder:text-slate-500"
+          <input className="w-full p-4 border border-white/10 rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none placeholder:text-slate-500"
             placeholder={`Deal WhatsApp (default: ${shopWhatsapp || 'business WhatsApp'})`}
             value={dealContactWhatsapp}
             onChange={(e) => setDealContactWhatsapp(e.target.value)} />
         </div>
 
-        <select className="w-full p-4 border border-white/10 rounded-xl mb-4 focus:ring-2 focus:ring-purple-500 outline-none"
+        <select className="w-full p-4 border border-white/10 rounded-2xl mb-4 focus:ring-2 focus:ring-violet-500 outline-none"
           value={category} onChange={(e) => setCategory(e.target.value)}>
           <option value="">Select Category</option>
           {CATEGORY_OPTIONS.map((opt) => (
@@ -1214,19 +1235,19 @@ export default function BusinessDashboard() {
         </select>
 
         <div className="grid md:grid-cols-2 gap-4 mb-4">
-          <select className="w-full p-4 border border-white/10 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+          <select className="w-full p-4 border border-white/10 rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none"
             value={redemption} onChange={(e) => setRedemption(e.target.value)}>
             <option value="in-store">In-store only</option>
             <option value="online">Online only</option>
             <option value="both">In-store + Online</option>
           </select>
-          <input type="date" className="w-full p-4 border border-white/10 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
+          <input type="date" className="w-full p-4 border border-white/10 rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none"
             value={validTillDate} onChange={(e) => setValidTillDate(e.target.value)} />
         </div>
 
         <div className="relative mb-4">
           <FileText size={15} className="absolute left-3 top-4 text-slate-500" />
-          <textarea className="w-full p-4 pl-10 border border-white/10 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none placeholder:text-slate-500"
+          <textarea className="w-full p-4 pl-10 border border-white/10 rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none placeholder:text-slate-500"
             placeholder="Terms & conditions (e.g. valid Mon-Fri, one redemption per user)"
             value={terms}
             onChange={(e) => setTerms(e.target.value)}
@@ -1234,7 +1255,7 @@ export default function BusinessDashboard() {
         </div>
 
         {/* ── Extra Deal Details ── */}
-        <div className="mb-4 rounded-xl border border-white/8 bg-slate-800/40 p-4 space-y-4">
+        <div className="mb-4 rounded-2xl border border-white/10 bg-slate-800/40 p-4 space-y-4">
           <p className="text-sm font-semibold text-slate-300">Deal Extras</p>
 
           <div className="grid md:grid-cols-3 gap-3">
@@ -1243,7 +1264,7 @@ export default function BusinessDashboard() {
               <input
                 type="number"
                 min={1}
-                className="w-full rounded-xl border border-white/10 p-3 text-sm outline-none focus:ring-2 focus:ring-purple-500 placeholder:text-slate-500"
+                className="w-full rounded-2xl border border-white/10 p-3 text-sm outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-500"
                 placeholder="e.g. 50"
                 value={maxRedemptions}
                 onChange={(e) => setMaxRedemptions(e.target.value)}
@@ -1252,7 +1273,7 @@ export default function BusinessDashboard() {
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-400">Min Purchase</label>
               <input
-                className="w-full rounded-xl border border-white/10 p-3 text-sm outline-none focus:ring-2 focus:ring-purple-500 placeholder:text-slate-500"
+                className="w-full rounded-2xl border border-white/10 p-3 text-sm outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-500"
                 placeholder="e.g. ₹500"
                 value={minPurchase}
                 onChange={(e) => setMinPurchase(e.target.value)}
@@ -1261,7 +1282,7 @@ export default function BusinessDashboard() {
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-400">Valid Hours</label>
               <input
-                className="w-full rounded-xl border border-white/10 p-3 text-sm outline-none focus:ring-2 focus:ring-purple-500 placeholder:text-slate-500"
+                className="w-full rounded-2xl border border-white/10 p-3 text-sm outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-500"
                 placeholder="e.g. Mon–Fri 10am–6pm"
                 value={validHours}
                 onChange={(e) => setValidHours(e.target.value)}
@@ -1283,8 +1304,8 @@ export default function BusinessDashboard() {
                   }
                   className={`rounded-full border px-3 py-1 text-xs font-medium transition-all
                     ${dealTags.includes(tag)
-                      ? 'border-purple-500 bg-purple-500/20 text-purple-300'
-                      : 'border-white/10 bg-white/5 text-slate-400 hover:border-purple-500/50 hover:text-slate-200'}`}
+                      ? 'border-violet-500 bg-violet-500/20 text-violet-300'
+                      : 'border-white/10 bg-white/5 text-slate-400 hover:border-violet-500/50 hover:text-slate-200'}`}
                 >
                   {tag}
                 </button>
@@ -1295,12 +1316,12 @@ export default function BusinessDashboard() {
           <label className="flex cursor-pointer items-center gap-3">
             <div
               onClick={() => setAgeRestricted((v) => !v)}
-              className={`relative h-6 w-11 rounded-full transition-colors ${ageRestricted ? 'bg-red-500' : 'bg-slate-700'}`}
+              className={`relative h-6 w-11 rounded-full transition-colors ${ageRestricted ? 'bg-rose-500' : 'bg-slate-700'}`}
             >
               <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${ageRestricted ? 'translate-x-5' : 'translate-x-0.5'}`} />
             </div>
             <span className="text-sm font-medium text-slate-300">
-              18+ only{ageRestricted && <span className="ml-2 rounded-full bg-red-500/20 px-2 py-0.5 text-[11px] font-semibold text-red-400 border border-red-500/30">Age restricted</span>}
+              18+ only{ageRestricted && <span className="ml-2 rounded-full bg-rose-500/20 px-2 py-0.5 text-[11px] font-semibold text-rose-400 border border-rose-500/30">Age restricted</span>}
             </span>
           </label>
         </div>
@@ -1312,7 +1333,7 @@ export default function BusinessDashboard() {
             if (v.lat !== null && v.lng !== null) setLocationError(null);
           }} />
           {locationError && (
-            <p className="text-xs text-red-600 mt-2">{locationError}</p>
+            <p className="text-xs text-rose-400 mt-2">{locationError}</p>
           )}
         </div>
 
@@ -1328,23 +1349,42 @@ export default function BusinessDashboard() {
         </p>
 
         <button disabled={submitting}
-          className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 rounded-xl font-semibold hover:opacity-90 transition disabled:opacity-60">
+          className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white py-4 rounded-2xl font-semibold shadow-neon-violet hover:opacity-90 transition disabled:opacity-60 disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
           {submitting ? 'Adding deal…' : 'Add Deal'}
         </button>
       </form>
 
       {/* DEAL LIST */}
+      {!dealsLoaded ? (
+        <div className="space-y-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-40 animate-pulse rounded-2xl border border-white/10 bg-slate-900/80" />
+          ))}
+        </div>
+      ) : myDeals.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-6 py-14 text-center shadow-card">
+          <Ticket size={26} className="text-slate-600" />
+          <p className="text-sm font-semibold text-slate-300">No deals yet</p>
+          <p className="max-w-sm text-sm leading-relaxed text-slate-500">Create your first deal using the form above to start appearing on the map and attracting customers nearby.</p>
+        </div>
+      ) : (
       <div className="space-y-6">
-        {myDeals.map((deal) => {
+        {myDeals.map((deal, dealIndex) => {
           const hasLoc = deal.latitude !== null && deal.longitude !== null;
           const locText = [deal.area, deal.city].filter(Boolean).join(', ')
             || (hasLoc ? 'Coords saved (no area name)' : '');
 
           return (
-            <motion.div key={deal.id} whileHover={{ scale: 1.01 }} className="rounded-2xl border border-white/8 bg-slate-900/80 p-4 shadow-lg backdrop-blur md:p-6">
+            <motion.div
+              key={deal.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut', delay: Math.min(dealIndex, 8) * 0.05 }}
+              className="card-press rounded-2xl border border-white/10 bg-slate-900/80 p-4 shadow-card md:p-6"
+            >
               {(deal.image_urls?.[0] || deal.image) && (
                 <div className="relative mb-4">
-                  <img src={deal.image_urls?.[0] || deal.image || ''} alt="deal" className="w-full h-48 object-cover rounded-xl" />
+                  <img src={deal.image_urls?.[0] || deal.image || ''} alt="deal" className="w-full h-48 object-cover rounded-2xl" />
                   {!!(deal.image_urls && deal.image_urls.length > 1) && (
                     <span className="absolute right-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-semibold text-white">
                       +{deal.image_urls.length - 1} more
@@ -1365,16 +1405,16 @@ export default function BusinessDashboard() {
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   {hasLoc ? (
-                    <span className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full shrink-0">
+                    <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-1 rounded-full shrink-0">
                       <MapPin size={11} /> Pinned
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full shrink-0">
+                    <span className="flex items-center gap-1 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded-full shrink-0">
                       <MapPinOff size={11} /> No location
                     </span>
                   )}
                   {deal.is_boosted && deal.boost_until && new Date(deal.boost_until).getTime() > nowTs && (
-                    <span className="rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-700">
+                    <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-300">
                       Boosted till {new Date(deal.boost_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                     </span>
                   )}
@@ -1382,7 +1422,7 @@ export default function BusinessDashboard() {
               </div>
 
               <p className="mt-2 flex items-center gap-1 text-xs md:text-sm">
-                <MapPin size={13} className={hasLoc ? 'text-purple-400' : 'text-slate-600'} />
+                <MapPin size={13} className={hasLoc ? 'text-violet-400' : 'text-slate-600'} />
                 {locText
                   ? <span className="text-slate-400">{locText}</span>
                   : <span className="text-slate-600 italic">No location - won&apos;t appear on map</span>
@@ -1392,7 +1432,7 @@ export default function BusinessDashboard() {
               <div className="flex gap-6 mt-3 text-sm text-slate-400">
                 <span className="flex items-center gap-1"><Eye size={16} /> {deal.views}</span>
                 <span className="flex items-center gap-1"><MousePointerClick size={16} /> {deal.clicks}</span>
-                <span className="text-xs rounded-full px-2 py-0.5 bg-slate-800 text-slate-400 border border-white/8">
+                <span className="text-xs rounded-full px-2 py-0.5 bg-slate-800 text-slate-400 border border-white/10">
                   Health {computeDealHealth(deal)}%
                 </span>
               </div>
@@ -1407,28 +1447,28 @@ export default function BusinessDashboard() {
                         : (deal.image ? [deal.image] : []),
                     })
                   }
-                  className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition"
+                  className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-lg"
                 >
                   <Pencil size={15} /> Edit
                 </button>
-                <button onClick={() => handleDeleteDeal(deal.id)} className="flex items-center gap-1 text-sm text-rose-400 hover:text-rose-300 transition">
+                <button onClick={() => handleDeleteDeal(deal.id)} className="flex items-center gap-1 text-sm text-rose-400 hover:text-rose-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-lg">
                   <Trash2 size={15} /> Delete
                 </button>
                 <button onClick={() => setEditingLocation(deal)}
-                  className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-medium transition
+                  className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
                     ${hasLoc ? 'text-violet-400 bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30'
                       : 'text-amber-400 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30'}`}>
                   <MapPin size={14} />
                   {hasLoc ? 'Edit Location' : 'Set Location'}
                 </button>
                 <button onClick={() => togglePauseDeal(deal)}
-                  className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200 transition">
+                  className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-lg">
                   {deal.status === 'paused' ? 'Resume' : 'Pause'}
                 </button>
-                <button onClick={() => duplicateDeal(deal)} className="flex items-center gap-1 text-sm text-indigo-400 hover:text-indigo-300 transition">
+                <button onClick={() => duplicateDeal(deal)} className="flex items-center gap-1 text-sm text-indigo-400 hover:text-indigo-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-lg">
                   Duplicate
                 </button>
-                <button onClick={() => extendDeal(deal)} className="flex items-center gap-1 text-sm text-emerald-400 hover:text-emerald-300 transition">
+                <button onClick={() => extendDeal(deal)} className="flex items-center gap-1 text-sm text-emerald-400 hover:text-emerald-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-lg">
                   +7 days
                 </button>
                 {boostPlans.map((plan) => (
@@ -1436,7 +1476,7 @@ export default function BusinessDashboard() {
                     key={plan.days}
                     onClick={() => boostDeal(deal, plan.days)}
                     disabled={boostingKey === `${deal.id}-${plan.days}`}
-                    className="flex items-center gap-1 rounded-lg border border-fuchsia-200 bg-fuchsia-50 px-3 py-1.5 text-sm font-medium text-fuchsia-700 hover:bg-fuchsia-100"
+                    className="flex items-center gap-1 rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-1.5 text-sm font-medium text-fuchsia-300 hover:bg-fuchsia-500/20 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                   >
                     {boostingKey === `${deal.id}-${plan.days}`
                       ? 'Boosting...'
@@ -1448,37 +1488,43 @@ export default function BusinessDashboard() {
           );
         })}
       </div>
+      )}
 
       {editingDeal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl overflow-y-auto max-h-[90vh] [&_input]:bg-slate-800/80 [&_input]:text-white [&_textarea]:bg-slate-800/80 [&_textarea]:text-white [&_select]:bg-slate-800/80 [&_select]:text-white">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="bg-slate-900 border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-card-hover overflow-y-auto max-h-[90vh] [&_input]:bg-slate-800/80 [&_input]:text-white [&_textarea]:bg-slate-800/80 [&_textarea]:text-white [&_select]:bg-slate-800/80 [&_select]:text-white"
+          >
             <h2 className="text-xl font-semibold text-white mb-4">Edit Deal</h2>
-            <input className="w-full p-3 border border-white/10 rounded-xl mb-3 outline-none focus:ring-2 focus:ring-purple-500 placeholder:text-slate-500" value={editingDeal.title}
+            <input className="w-full p-3 border border-white/10 rounded-2xl mb-3 outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-500" value={editingDeal.title}
               onChange={(e) => setEditingDeal({ ...editingDeal, title: e.target.value })} />
-            <textarea className="w-full p-3 border border-white/10 rounded-xl mb-3 outline-none focus:ring-2 focus:ring-purple-500 placeholder:text-slate-500" value={editingDeal.description}
+            <textarea className="w-full p-3 border border-white/10 rounded-2xl mb-3 outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-500" value={editingDeal.description}
               onChange={(e) => setEditingDeal({ ...editingDeal, description: e.target.value })} />
 
             <div className="grid grid-cols-2 gap-2 mb-3">
               <input
-                className="w-full p-3 border border-white/10 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500 placeholder:text-slate-500"
+                className="w-full p-3 border border-white/10 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-500"
                 placeholder="Offer price"
                 value={editingDeal.offer_price || ''}
                 onChange={(e) => setEditingDeal({ ...editingDeal, offer_price: e.target.value })}
               />
               <input
-                className="w-full p-3 border border-white/10 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500 placeholder:text-slate-500"
+                className="w-full p-3 border border-white/10 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-500"
                 placeholder="Original price"
                 value={editingDeal.original_price || ''}
                 onChange={(e) => setEditingDeal({ ...editingDeal, original_price: e.target.value })}
               />
               <input
-                className="w-full p-3 border border-white/10 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500 placeholder:text-slate-500"
+                className="w-full p-3 border border-white/10 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-500"
                 placeholder="Discount label"
                 value={editingDeal.discount_label || ''}
                 onChange={(e) => setEditingDeal({ ...editingDeal, discount_label: e.target.value })}
               />
               <input
-                className="w-full p-3 border border-white/10 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500 placeholder:text-slate-500"
+                className="w-full p-3 border border-white/10 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-500"
                 placeholder="Coupon code"
                 value={editingDeal.coupon_code || ''}
                 onChange={(e) => setEditingDeal({ ...editingDeal, coupon_code: e.target.value })}
@@ -1487,7 +1533,7 @@ export default function BusinessDashboard() {
 
             <div className="grid grid-cols-2 gap-2 mb-3">
               <select
-                className="w-full p-3 border border-white/10 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full p-3 border border-white/10 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-violet-500"
                 value={editingDeal.category || ''}
                 onChange={(e) => setEditingDeal({ ...editingDeal, category: e.target.value || null })}
               >
@@ -1497,7 +1543,7 @@ export default function BusinessDashboard() {
                 ))}
               </select>
               <select
-                className="w-full p-3 border border-white/10 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full p-3 border border-white/10 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-violet-500"
                 value={editingDeal.redemption_mode || 'in-store'}
                 onChange={(e) => setEditingDeal({ ...editingDeal, redemption_mode: e.target.value })}
               >
@@ -1509,20 +1555,20 @@ export default function BusinessDashboard() {
 
             <input
               type="date"
-              className="w-full p-3 border border-white/10 rounded-xl text-sm mb-3 outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full p-3 border border-white/10 rounded-2xl text-sm mb-3 outline-none focus:ring-2 focus:ring-violet-500"
               value={editingDeal.valid_till_date || ''}
               onChange={(e) => setEditingDeal({ ...editingDeal, valid_till_date: e.target.value || null })}
             />
 
             <div className="grid grid-cols-2 gap-2 mb-3">
               <input
-                className="w-full p-3 border border-white/10 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500 placeholder:text-slate-500"
+                className="w-full p-3 border border-white/10 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-500"
                 placeholder="Contact phone"
                 value={editingDeal.contact_phone || ''}
                 onChange={(e) => setEditingDeal({ ...editingDeal, contact_phone: e.target.value })}
               />
               <input
-                className="w-full p-3 border border-white/10 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500 placeholder:text-slate-500"
+                className="w-full p-3 border border-white/10 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-500"
                 placeholder="Contact WhatsApp"
                 value={editingDeal.contact_whatsapp || ''}
                 onChange={(e) => setEditingDeal({ ...editingDeal, contact_whatsapp: e.target.value })}
@@ -1530,21 +1576,21 @@ export default function BusinessDashboard() {
             </div>
 
             <textarea
-              className="w-full p-3 border border-white/10 rounded-xl mb-3 text-sm outline-none focus:ring-2 focus:ring-purple-500 placeholder:text-slate-500"
+              className="w-full p-3 border border-white/10 rounded-2xl mb-3 text-sm outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-500"
               placeholder="Terms & conditions"
               value={editingDeal.terms || ''}
               onChange={(e) => setEditingDeal({ ...editingDeal, terms: e.target.value })}
             />
 
             {((editingDeal.image_urls && editingDeal.image_urls.length) || editingDeal.image) && (
-              <div className="mb-3 rounded-xl border border-white/8 bg-slate-800/40 p-3">
+              <div className="mb-3 rounded-2xl border border-white/10 bg-slate-800/40 p-3">
                 <p className="mb-2 text-xs font-semibold text-slate-400">Current Images</p>
                 <div className="grid grid-cols-3 gap-2">
                   {(editingDeal.image_urls && editingDeal.image_urls.length
                     ? editingDeal.image_urls
                     : (editingDeal.image ? [editingDeal.image] : [])
                   ).map((img, idx) => (
-                    <div key={`${img}-${idx}`} className="relative overflow-hidden rounded-lg border border-slate-200 bg-white">
+                    <div key={`${img}-${idx}`} className="relative overflow-hidden rounded-lg border border-white/10 bg-slate-900">
                       <img src={img} alt={`Deal image ${idx + 1}`} className="h-20 w-full object-cover" />
                       <div className="space-y-1 p-1">
                         <button
@@ -1560,7 +1606,7 @@ export default function BusinessDashboard() {
                               image: next[0] || null,
                             });
                           }}
-                          className="w-full rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-red-100"
+                          className="w-full rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-400 hover:bg-rose-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                         >
                           Delete
                         </button>
@@ -1579,7 +1625,7 @@ export default function BusinessDashboard() {
                                 image: next[0] || null,
                               });
                             }}
-                            className="w-full rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 hover:bg-indigo-100"
+                            className="w-full rounded bg-indigo-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-300 hover:bg-indigo-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                           >
                             Set cover
                           </button>
@@ -1605,10 +1651,10 @@ export default function BusinessDashboard() {
             />
             <p className="mb-4 text-xs text-slate-500">Upload more images to extend gallery (max 8 total).</p>
             <div className="flex gap-3">
-              <button onClick={handleUpdateDeal} className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-medium hover:opacity-90 transition">Save</button>
-              <button onClick={() => { setEditingDeal(null); setEditImageFiles([]); }} className="flex-1 border border-white/10 py-3 rounded-xl text-slate-300 hover:bg-white/5 transition">Cancel</button>
+              <button onClick={handleUpdateDeal} className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white py-3 rounded-2xl font-medium shadow-neon-violet hover:opacity-90 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">Save</button>
+              <button onClick={() => { setEditingDeal(null); setEditImageFiles([]); }} className="flex-1 border border-white/10 py-3 rounded-2xl text-slate-300 hover:bg-white/5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">Cancel</button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
 

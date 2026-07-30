@@ -12,11 +12,11 @@ export default function MapFilters({
   setBoostedOnly,
 }: Props) {
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-lg px-4 py-3 flex gap-4 items-center z-10">
+    <div className="absolute top-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-4 rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 shadow-card backdrop-blur-xl">
       <select
         value={distance}
         onChange={(e) => setDistance(Number(e.target.value))}
-        className="border rounded px-2 py-1 text-sm bg-white text-gray-900"
+        className="rounded-xl border border-white/10 bg-slate-800/80 px-2.5 py-1.5 text-sm text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
       >
         <option value={1}>1 km</option>
         <option value={3}>3 km</option>
@@ -24,11 +24,12 @@ export default function MapFilters({
         <option value={10}>10 km</option>
       </select>
 
-      <label className="flex items-center gap-1 text-sm">
+      <label className="flex items-center gap-2 text-sm text-slate-300">
         <input
           type="checkbox"
           checked={boostedOnly}
           onChange={(e) => setBoostedOnly(e.target.checked)}
+          className="h-4 w-4 rounded border-white/20 bg-slate-800/80 text-violet-500 focus-visible:ring-2 focus-visible:ring-violet-500/40"
         />
         Boosted only
       </label>

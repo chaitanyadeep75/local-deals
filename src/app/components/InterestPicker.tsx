@@ -59,7 +59,7 @@ export default function InterestPicker({
       >
         <div className="px-5 pt-5">
           <div className="mb-1 flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600">
               <Sparkles size={15} className="text-white" />
             </div>
             <h3 className="text-lg font-black text-white">{isEdit ? 'Your interests' : 'Make it yours'}</h3>
@@ -73,14 +73,17 @@ export default function InterestPicker({
 
         <div className="max-h-[45vh] overflow-y-auto px-5 py-4">
           <div className="flex flex-wrap gap-2">
-            {CATEGORY_OPTIONS.map((cat) => {
+            {CATEGORY_OPTIONS.map((cat, i) => {
               const meta = getCategoryMeta(cat.value);
               const active = picked.includes(cat.value);
               return (
-                <button
+                <motion.button
                   key={cat.value}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeOut', delay: Math.min(i * 0.04, 0.4) }}
                   onClick={() => toggle(cat.value)}
-                  className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[13px] font-semibold transition-all duration-150 active:scale-95 ${
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-[13px] font-semibold transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 ${
                     active
                       ? 'border-violet-500/50 bg-violet-500/20 text-violet-300 shadow-[0_0_12px_rgba(139,92,246,0.25)]'
                       : 'border-white/10 bg-white/5 text-slate-400'
@@ -88,7 +91,7 @@ export default function InterestPicker({
                 >
                   <span className="text-base leading-none">{meta.emoji}</span>
                   {cat.label}
-                </button>
+                </motion.button>
               );
             })}
           </div>
@@ -100,14 +103,14 @@ export default function InterestPicker({
         >
           <button
             onClick={() => (isEdit ? onCancel?.() : finish([]))}
-            className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-500 transition hover:text-slate-300"
+            className="rounded-xl px-4 py-3 text-sm font-semibold text-slate-500 transition hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
           >
             {isEdit ? 'Cancel' : 'Skip'}
           </button>
           <button
             onClick={() => finish(picked)}
             disabled={!isEdit && picked.length === 0}
-            className="flex-1 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-40"
+            className="flex-1 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             {isEdit
               ? `Save interests (${picked.length})`

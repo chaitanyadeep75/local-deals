@@ -75,10 +75,13 @@ export default function UserSignupPage() {
         <div className="absolute bottom-1/3 left-1/4 h-48 w-48 rounded-full bg-violet-600/10 blur-[60px]" />
       </div>
 
-      <div className="relative w-full">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="relative w-full"
+      >
         <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
-          <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-violet-500" />
-
           <div className="p-7">
             <AnimatePresence mode="wait">
               {success ? (
@@ -91,13 +94,13 @@ export default function UserSignupPage() {
                   <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/20 border border-emerald-500/30 shadow-neon-emerald">
                     <CheckCircle2 size={28} className="text-emerald-400" />
                   </div>
-                  <h2 className="text-xl font-extrabold text-white">You&apos;re in!</h2>
+                  <h2 className="text-xl font-extrabold tracking-tight text-white">You&apos;re in!</h2>
                   <p className="mt-2 text-sm text-slate-500">
                     Check your email to verify your account, then sign in.
                   </p>
                   <Link
                     href="/user/login"
-                    className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 text-sm font-bold text-white shadow-neon-emerald hover:opacity-90 transition"
+                    className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 text-sm font-bold text-white shadow-neon-emerald hover:opacity-90 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                   >
                     Go to Sign In <ArrowRight size={15} />
                   </Link>
@@ -109,7 +112,7 @@ export default function UserSignupPage() {
                     <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-neon-emerald">
                       <Zap size={20} className="text-white" fill="white" />
                     </div>
-                    <h1 className="text-xl font-extrabold text-white">Create account</h1>
+                    <h1 className="text-xl font-extrabold tracking-tight text-white">Create account</h1>
                     <p className="mt-1 text-sm text-slate-500">Save deals, write reviews, get notified</p>
                   </div>
 
@@ -117,7 +120,7 @@ export default function UserSignupPage() {
                   <button
                     onClick={handleGoogle}
                     disabled={googleLoading || loading}
-                    className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/20 disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/20 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                   >
                     {googleLoading
                       ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -153,7 +156,7 @@ export default function UserSignupPage() {
                     {/* Name */}
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Full Name</label>
-                      <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
                         <User size={15} className="shrink-0 text-slate-500" />
                         <input
                           type="text" required value={name}
@@ -168,7 +171,7 @@ export default function UserSignupPage() {
                     {/* Email */}
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Email</label>
-                      <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
                         <Mail size={15} className="shrink-0 text-slate-500" />
                         <input
                           type="email" required value={email}
@@ -183,7 +186,7 @@ export default function UserSignupPage() {
                     {/* Password */}
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Password</label>
-                      <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
                         <Lock size={15} className="shrink-0 text-slate-500" />
                         <input
                           type={showPassword ? 'text' : 'password'} required value={password}
@@ -192,7 +195,8 @@ export default function UserSignupPage() {
                           className="flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder-slate-600"
                           style={{ border: 'none', padding: 0, boxShadow: 'none', background: 'transparent' }}
                         />
-                        <button type="button" onClick={() => setShowPassword((p) => !p)} className="text-slate-600 hover:text-slate-400">
+                        <button type="button" onClick={() => setShowPassword((p) => !p)} aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          className="text-slate-500 hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-full p-0.5">
                           {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                       </div>
@@ -218,7 +222,7 @@ export default function UserSignupPage() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3.5 text-sm font-bold text-white shadow-neon-emerald transition hover:opacity-90 disabled:opacity-50 mt-1"
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3.5 text-sm font-bold text-white shadow-neon-emerald transition hover:opacity-90 disabled:opacity-50 mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                     >
                       {loading
                         ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -231,11 +235,11 @@ export default function UserSignupPage() {
                   <div className="mt-5 space-y-2 border-t border-white/8 pt-5 text-center text-sm">
                     <p className="text-slate-500">
                       Already have an account?{' '}
-                      <Link href="/user/login" className="font-semibold text-emerald-400 hover:text-emerald-300 transition">Sign in →</Link>
+                      <Link href="/user/login" className="font-semibold text-emerald-400 hover:text-emerald-300 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded">Sign in →</Link>
                     </p>
-                    <p className="text-slate-600">
+                    <p className="text-slate-500">
                       Business owner?{' '}
-                      <Link href="/signup" className="text-slate-500 hover:text-slate-300 transition">Business signup</Link>
+                      <Link href="/signup" className="text-slate-500 hover:text-slate-300 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded">Business signup</Link>
                     </p>
                   </div>
                 </motion.div>
@@ -243,7 +247,7 @@ export default function UserSignupPage() {
             </AnimatePresence>
           </div>
         </div>
-      </div>
+      </motion.div>
     </main>
   );
 }

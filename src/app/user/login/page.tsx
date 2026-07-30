@@ -179,23 +179,26 @@ function UserLoginContent() {
         <div className="absolute top-1/2 left-1/4 h-40 w-40 rounded-full bg-violet-600/10 blur-[60px]" />
       </div>
 
-      <div className="relative w-full">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="relative w-full"
+      >
         <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
-          <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-violet-500" />
-
           <div className="p-7">
             {/* Header */}
             <div className="mb-6 text-center">
               <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-neon-emerald">
                 <Zap size={20} className="text-white" fill="white" />
               </div>
-              <h1 className="text-xl font-extrabold text-white">Welcome back</h1>
+              <h1 className="text-xl font-extrabold tracking-tight text-white">Welcome back</h1>
               <p className="mt-1 text-sm text-slate-500">Sign in to your LocalDeals account</p>
             </div>
 
             {/* Google */}
             <button onClick={handleGoogle} disabled={googleLoading || loading}
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/20 disabled:opacity-50">
+              className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/20 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
               {googleLoading
                 ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 : <GoogleIcon />}
@@ -209,10 +212,10 @@ function UserLoginContent() {
             </div>
 
             {/* Tabs: Phone / Email */}
-            <div className="mb-5 flex gap-1 rounded-xl border border-white/8 bg-white/5 p-1">
+            <div className="mb-5 flex gap-1 rounded-full border border-white/8 bg-white/5 p-1">
               {(['phone', 'email'] as Tab[]).map((t) => (
                 <button key={t} onClick={() => { setTab(t); setError(null); setPhoneStep('enter'); }}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all capitalize
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-xs font-semibold transition-all capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
                     ${tab === t ? 'bg-white/15 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
                   {t === 'phone' ? <Phone size={13} /> : <Mail size={13} />}
                   {t === 'phone' ? 'Mobile OTP' : 'Email'}
@@ -241,7 +244,7 @@ function UserLoginContent() {
                     <form onSubmit={handleSendOtp} className="space-y-4">
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Mobile Number</label>
-                        <div className="flex items-center gap-2 overflow-hidden rounded-xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition-all focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                        <div className="flex items-center gap-2 overflow-hidden rounded-2xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition-all focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
                           <div className="flex items-center gap-1.5 border-r border-white/10 pr-2.5 text-sm font-semibold text-slate-400">
                             🇮🇳 <span>+91</span>
                           </div>
@@ -259,14 +262,14 @@ function UserLoginContent() {
                         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Send OTP via</p>
                         <div className="grid grid-cols-2 gap-2">
                           <button type="button" onClick={() => setOtpChannel('sms')}
-                            className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-semibold transition-all
+                            className={`flex items-center justify-center gap-2 rounded-2xl border py-2.5 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
                               ${otpChannel === 'sms'
                                 ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-400 shadow-neon-emerald'
                                 : 'border-white/10 bg-white/5 text-slate-400 hover:border-white/20 hover:text-slate-200'}`}>
                             <Phone size={13} /> SMS
                           </button>
                           <button type="button" onClick={() => setOtpChannel('whatsapp')}
-                            className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-semibold transition-all
+                            className={`flex items-center justify-center gap-2 rounded-2xl border py-2.5 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
                               ${otpChannel === 'whatsapp'
                                 ? 'border-green-500/50 bg-green-500/15 text-green-400'
                                 : 'border-white/10 bg-white/5 text-slate-400 hover:border-white/20 hover:text-slate-200'}`}>
@@ -274,12 +277,12 @@ function UserLoginContent() {
                           </button>
                         </div>
                         {otpChannel === 'whatsapp' && (
-                          <p className="mt-1.5 text-[11px] text-slate-600">OTP will arrive as a WhatsApp message</p>
+                          <p className="mt-1.5 text-[11px] text-slate-500">OTP will arrive as a WhatsApp message</p>
                         )}
                       </div>
 
                       <button type="submit" disabled={loading || phone.length !== 10}
-                        className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-40
+                        className={`flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
                           ${otpChannel === 'whatsapp'
                             ? 'bg-gradient-to-r from-green-500 to-emerald-500 shadow-neon-emerald'
                             : 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-neon-emerald'}`}>
@@ -291,7 +294,7 @@ function UserLoginContent() {
                   ) : (
                     <form onSubmit={handleVerifyOtp} className="space-y-5">
                       <div className="text-center">
-                        <div className={`mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl ${otpChannel === 'whatsapp' ? 'bg-green-500/20 text-green-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                        <div className={`mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-2xl ${otpChannel === 'whatsapp' ? 'bg-green-500/20 text-green-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
                           {otpChannel === 'whatsapp' ? <WhatsAppIcon /> : <Phone size={18} />}
                         </div>
                         <p className="text-sm font-semibold text-white">
@@ -299,7 +302,7 @@ function UserLoginContent() {
                         </p>
                         <p className="mt-0.5 font-mono text-sm text-emerald-400">+91 {phone}</p>
                         <button type="button" onClick={() => { setPhoneStep('enter'); setOtp(''); setError(null); }}
-                          className="mt-1 text-xs text-slate-500 hover:text-slate-300 underline">
+                          className="mt-1 text-xs text-slate-500 hover:text-slate-300 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded">
                           Change number
                         </button>
                       </div>
@@ -307,7 +310,7 @@ function UserLoginContent() {
                       <OtpInput value={otp} onChange={setOtp} disabled={loading} />
 
                       <button type="submit" disabled={loading || otp.length !== 6}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3.5 text-sm font-bold text-white shadow-neon-emerald transition hover:opacity-90 disabled:opacity-40">
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3.5 text-sm font-bold text-white shadow-neon-emerald transition hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
                         {loading
                           ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                           : 'Verify & Sign In'}
@@ -315,10 +318,10 @@ function UserLoginContent() {
 
                       <div className="text-center">
                         {countdown > 0 ? (
-                          <p className="text-xs text-slate-600">Resend in <span className="font-mono text-slate-400">{countdown}s</span></p>
+                          <p className="text-xs text-slate-500">Resend in <span className="font-mono text-slate-400">{countdown}s</span></p>
                         ) : (
                           <button type="button" onClick={resendOtp} disabled={loading}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 disabled:opacity-50">
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded">
                             <RotateCcw size={11} /> Resend OTP
                           </button>
                         )}
@@ -334,7 +337,7 @@ function UserLoginContent() {
                   <form onSubmit={handleEmailLogin} className="space-y-4">
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Email</label>
-                      <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
                         <Mail size={15} className="shrink-0 text-slate-500" />
                         <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
                           placeholder="you@email.com"
@@ -345,23 +348,24 @@ function UserLoginContent() {
                     <div>
                       <div className="mb-1.5 flex items-center justify-between">
                         <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">Password</label>
-                        <Link href="/forgot-password" className="text-xs text-emerald-400 hover:text-emerald-300 transition">
+                        <Link href="/forgot-password" className="text-xs text-emerald-400 hover:text-emerald-300 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded">
                           Forgot password?
                         </Link>
                       </div>
-                      <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
                         <Lock size={15} className="shrink-0 text-slate-500" />
                         <input type={showPassword ? 'text' : 'password'} required value={password}
                           onChange={(e) => setPassword(e.target.value)} placeholder="Your password"
                           className="flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder-slate-600"
                           style={{ border: 'none', padding: 0, boxShadow: 'none', background: 'transparent' }} />
-                        <button type="button" onClick={() => setShowPassword((p) => !p)} className="text-slate-600 hover:text-slate-400">
+                        <button type="button" onClick={() => setShowPassword((p) => !p)} aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          className="text-slate-500 hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-full p-0.5">
                           {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                       </div>
                     </div>
                     <button type="submit" disabled={loading}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3.5 text-sm font-bold text-white shadow-neon-emerald transition hover:opacity-90 disabled:opacity-50">
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3.5 text-sm font-bold text-white shadow-neon-emerald transition hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
                       {loading
                         ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                         : <>Sign In <ArrowRight size={15} /></>}
@@ -375,19 +379,19 @@ function UserLoginContent() {
             <div className="mt-5 space-y-2 border-t border-white/8 pt-5 text-center text-sm">
               <p className="text-slate-500">
                 New here?{' '}
-                <Link href="/user/signup" className="font-semibold text-emerald-400 hover:text-emerald-300 transition">
+                <Link href="/user/signup" className="font-semibold text-emerald-400 hover:text-emerald-300 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded">
                   Create account →
                 </Link>
               </p>
-              <p className="text-slate-600">
+              <p className="text-slate-500">
                 Business owner?{' '}
-                <Link href="/login" className="text-slate-500 hover:text-slate-300 transition">Business login</Link>
+                <Link href="/login" className="text-slate-500 hover:text-slate-300 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded">Business login</Link>
               </p>
             </div>
           </div>
         </div>
-      <p className="mt-4 text-center text-xs text-slate-700">Protected by Supabase Auth · End-to-end encrypted</p>
-      </div>
+      <p className="mt-4 text-center text-xs text-slate-500">Protected by Supabase Auth · End-to-end encrypted</p>
+      </motion.div>
     </main>
   );
 }

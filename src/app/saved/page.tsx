@@ -82,13 +82,13 @@ export default function SavedDealsPage() {
 
   return (
     <main className="relative min-h-screen pb-16">
-      <div className="mb-4 flex items-center gap-2 pt-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-[0_2px_12px_rgba(52,211,153,0.4)]">
-          <Bookmark size={15} className="text-white" fill="white" />
+      <div className="mb-6 flex items-center gap-3 pt-2">
+        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-slate-900/80">
+          <Bookmark size={16} className="text-emerald-400" fill="currentColor" />
         </div>
-        <h1 className="text-xl font-extrabold tracking-tight text-white">Saved Deals</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-white">Saved Deals</h1>
         {authState === 'authed' && !loading && (
-          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">
             {deals.length} saved
           </span>
         )}
@@ -97,7 +97,7 @@ export default function SavedDealsPage() {
       {loading ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-white/8 bg-slate-900/95">
+            <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-white/8 bg-slate-900/80">
               <div className="h-48 bg-slate-800/70" />
               <div className="space-y-3 p-4">
                 <div className="h-4 w-3/4 rounded-lg bg-slate-800/70" />
@@ -107,33 +107,33 @@ export default function SavedDealsPage() {
           ))}
         </div>
       ) : authState === 'guest' ? (
-        <div className="py-20 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/8 bg-slate-900/80">
-            <Bookmark size={28} className="text-slate-600" />
+        <div className="flex flex-col items-center py-20 text-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-slate-900/80">
+            <Bookmark size={28} className="text-slate-500" />
           </div>
           <p className="text-lg font-bold text-slate-300">Sign in to see your saved deals</p>
-          <p className="mx-auto mt-1 max-w-xs text-sm text-slate-600">
+          <p className="mx-auto mt-1 max-w-xs text-sm text-slate-500">
             Save deals you love and find them here anytime, on any device.
           </p>
           <Link
             href="/user/login?next=%2Fsaved"
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
           >
             Sign In
           </Link>
         </div>
       ) : deals.length === 0 ? (
-        <div className="py-20 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/8 bg-slate-900/80">
-            <Sparkles size={28} className="text-slate-600" />
+        <div className="flex flex-col items-center py-20 text-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-slate-900/80">
+            <Sparkles size={28} className="text-slate-500" />
           </div>
           <p className="text-lg font-bold text-slate-300">Nothing saved yet</p>
-          <p className="mx-auto mt-1 max-w-xs text-sm text-slate-600">
+          <p className="mx-auto mt-1 max-w-xs text-sm text-slate-500">
             Tap the bookmark on any deal to keep it here for later.
           </p>
           <Link
             href="/"
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
           >
             Browse deals
           </Link>
@@ -141,14 +141,14 @@ export default function SavedDealsPage() {
       ) : (
         <motion.div layout className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
           <AnimatePresence>
-            {deals.map((deal) => (
+            {deals.map((deal, i) => (
               <motion.div
                 key={deal.id}
                 layout
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.97 }}
-                transition={{ duration: 0.22 }}
+                transition={{ duration: 0.2, ease: 'easeOut', delay: Math.min(i, 8) * 0.05 }}
               >
                 <DealCard
                   deal={deal}

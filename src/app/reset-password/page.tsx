@@ -61,12 +61,13 @@ function ResetContent() {
   return (
     <AnimatePresence mode="wait">
       {done ? (
-        <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        <motion.div key="done" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
           className="py-6 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/20">
             <CheckCircle2 size={28} className="text-emerald-400" />
           </div>
-          <h2 className="text-lg font-extrabold text-white">Password updated!</h2>
+          <h2 className="text-lg font-extrabold tracking-tight text-white">Password updated!</h2>
           <p className="mt-2 text-sm text-slate-500">Redirecting you to login…</p>
           <div className="mt-3 flex justify-center gap-1">
             {[0,1,2].map((i) => (
@@ -76,12 +77,13 @@ function ResetContent() {
           </div>
         </motion.div>
       ) : (
-        <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-neon-violet">
-              <KeyRound size={20} className="text-white" />
+        <motion.div key="form" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}>
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-violet-500/30 bg-violet-500/15">
+              <KeyRound size={20} className="text-violet-300" />
             </div>
-            <h1 className="text-xl font-extrabold text-white">Set new password</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-white">Set new password</h1>
             <p className="mt-1 text-sm text-slate-500">Choose a strong password</p>
           </div>
 
@@ -91,22 +93,24 @@ function ResetContent() {
                 initial={{ opacity: 0, height: 0, marginBottom: 0 }}
                 animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                className="flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3.5 py-3 text-sm text-rose-400">
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="flex items-start gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
                 <AlertCircle size={14} className="mt-0.5 shrink-0" /> {error}
               </motion.div>
             )}
           </AnimatePresence>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">New Password</label>
-              <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-violet-500/40 focus-within:ring-2 focus-within:ring-violet-500/20">
+              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-800/80 px-4 py-3.5 transition focus-within:border-violet-500/40 focus-within:ring-2 focus-within:ring-violet-500/20">
                 <Lock size={15} className="shrink-0 text-slate-500" />
                 <input type={showPw ? 'text' : 'password'} required value={password}
                   onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 characters"
                   className="flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder-slate-600"
                   style={{ border: 'none', padding: 0, boxShadow: 'none', background: 'transparent' }} />
-                <button type="button" onClick={() => setShowPw((p) => !p)} className="text-slate-600 hover:text-slate-400">
+                <button type="button" onClick={() => setShowPw((p) => !p)} aria-label={showPw ? 'Hide password' : 'Show password'}
+                  className="rounded-full p-1 text-slate-500 transition hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
                   {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
@@ -127,7 +131,7 @@ function ResetContent() {
 
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Confirm Password</label>
-              <div className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 transition
+              <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 transition
                 ${confirm && confirm !== password
                   ? 'border-rose-500/40 bg-rose-500/5'
                   : 'border-white/10 bg-slate-800/80 focus-within:border-violet-500/40 focus-within:ring-2 focus-within:ring-violet-500/20'}`}>
@@ -146,7 +150,7 @@ function ResetContent() {
             </div>
 
             <button type="submit" disabled={loading || (!!confirm && password !== confirm)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3.5 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 disabled:opacity-50 mt-1">
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-4 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 disabled:opacity-50 mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
               {loading
                 ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 : 'Update Password'}
@@ -168,8 +172,7 @@ export default function ResetPasswordPage() {
 
       <div className="relative w-full max-w-sm">
         <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
-          <div className="h-1 w-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-indigo-600" />
-          <div className="p-7">
+          <div className="p-8">
             <Suspense fallback={
               <div className="py-8 text-center">
                 <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-violet-500" />

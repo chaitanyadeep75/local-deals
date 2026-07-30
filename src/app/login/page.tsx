@@ -93,7 +93,7 @@ export default function LoginPage() {
             <button
               onClick={handleGoogle}
               disabled={googleLoading || loading}
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/20 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 disabled:opacity-50"
             >
               {googleLoading
                 ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -105,7 +105,7 @@ export default function LoginPage() {
             {/* Divider */}
             <div className="my-4 flex items-center gap-3">
               <div className="h-px flex-1 bg-white/8" />
-              <span className="text-xs font-medium text-slate-600">or with email</span>
+              <span className="text-xs font-medium text-slate-500">or with email</span>
               <div className="h-px flex-1 bg-white/8" />
             </div>
 
@@ -143,7 +143,7 @@ export default function LoginPage() {
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
                   <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">Password</label>
-                  <Link href="/forgot-password" className="text-xs text-violet-400 hover:text-violet-300 transition">
+                  <Link href="/forgot-password" className="text-xs text-violet-400 transition hover:text-violet-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded">
                     Forgot password?
                   </Link>
                 </div>
@@ -156,7 +156,12 @@ export default function LoginPage() {
                     className="flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder-slate-600"
                     style={{ border: 'none', padding: 0, boxShadow: 'none', background: 'transparent' }}
                   />
-                  <button type="button" onClick={() => setShowPassword((p) => !p)} className="text-slate-600 hover:text-slate-400">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((p) => !p)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="rounded text-slate-500 transition hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                  >
                     {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
@@ -165,7 +170,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3.5 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 hover:shadow-[0_0_32px_rgba(139,92,246,0.6)] disabled:opacity-50"
+                className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3.5 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 hover:shadow-[0_0_32px_rgba(139,92,246,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 disabled:opacity-50"
               >
                 {loading
                   ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -178,17 +183,17 @@ export default function LoginPage() {
             <div className="mt-5 space-y-2 border-t border-white/8 pt-5 text-center text-sm">
               <p className="text-slate-500">
                 No account?{' '}
-                <Link href="/signup" className="font-semibold text-violet-400 hover:text-violet-300 transition">Create one →</Link>
+                <Link href="/signup" className="rounded font-semibold text-violet-400 transition hover:text-violet-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">Create one →</Link>
               </p>
-              <p className="text-slate-600">
+              <p className="text-slate-500">
                 Not a business?{' '}
-                <Link href="/user/login" className="text-slate-500 hover:text-slate-300 transition">User login</Link>
+                <Link href="/user/login" className="rounded text-slate-500 transition hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">User login</Link>
               </p>
             </div>
           </div>
         </div>
 
-        <p className="mt-4 text-center text-xs text-slate-700">
+        <p className="mt-4 text-center text-xs text-slate-500">
           Protected by Supabase Auth · Your data stays secure
         </p>
       </div>

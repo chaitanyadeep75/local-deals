@@ -208,120 +208,133 @@ export default function UserProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex justify-center items-center h-screen bg-[#020617]">
+        <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 pb-24">
+    <main className="min-h-screen bg-[#020617] pb-24">
 
       {/* PROFILE HERO */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
-        {/* Decorative circles */}
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full" />
-        <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/10 rounded-full" />
+      <div className="relative overflow-hidden bg-slate-900/80 border-b border-white/10">
+        {/* Decorative accents */}
+        <div className="absolute -top-16 -right-10 w-56 h-56 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-fuchsia-600/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative px-6 pt-10 pb-16 text-white">
+        <div className="relative px-6 pt-10 pb-8">
           {/* Avatar */}
-          <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-3xl font-bold border-2 border-white/40 mb-4">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-3xl font-extrabold text-white shadow-neon-violet mb-4">
             {displayName.charAt(0).toUpperCase()}
           </div>
-          <h1 className="text-2xl font-bold">{displayName}</h1>
-          <p className="text-white/80 text-sm mt-1 flex items-center gap-1.5">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-50">{displayName}</h1>
+          <p className="text-slate-400 text-sm mt-1 flex items-center gap-1.5">
             <Mail size={13} />
             {user?.email}
           </p>
-          <div className="flex gap-4 mt-4 text-sm">
-            <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 text-center">
-              <p className="font-bold text-lg">{savedDeals.length}</p>
-              <p className="text-white/80 text-xs">Saved</p>
+          <div className="flex gap-3 mt-4 text-sm">
+            <div className="bg-slate-800/80 border border-white/10 rounded-2xl px-4 py-2 text-center">
+              <p className="font-bold text-lg text-slate-50">{savedDeals.length}</p>
+              <p className="text-slate-500 text-xs">Saved</p>
             </div>
-            <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 text-center">
-              <p className="font-bold text-lg">{reviews.length}</p>
-              <p className="text-white/80 text-xs">Reviews</p>
+            <div className="bg-slate-800/80 border border-white/10 rounded-2xl px-4 py-2 text-center">
+              <p className="font-bold text-lg text-slate-50">{reviews.length}</p>
+              <p className="text-slate-500 text-xs">Reviews</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* TABS */}
-      <div className="flex bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm -mt-4 rounded-t-3xl overflow-hidden">
+      <div className="flex bg-slate-950/95 backdrop-blur-xl border-b border-white/10 sticky top-0 z-20">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex-1 flex flex-col items-center gap-1 py-3.5 text-xs font-medium transition-all
-              ${tab === t.key
-                ? 'text-emerald-600 border-b-2 border-emerald-500 bg-emerald-50'
-                : 'text-gray-400 hover:text-gray-600'
-              }`}
+            className={`relative flex-1 flex flex-col items-center gap-1 py-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
+              ${tab === t.key ? 'text-slate-50' : 'text-slate-500 hover:text-slate-300'}`}
           >
             <t.icon size={18} />
             {t.label}
+            {tab === t.key && (
+              <motion.div
+                layoutId="profile-tab-indicator"
+                className="absolute bottom-0 inset-x-5 h-0.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 shadow-neon-violet"
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              />
+            )}
           </button>
         ))}
       </div>
 
-      <div className="px-6 pt-6 max-w-2xl mx-auto">
+      <div className="px-4 sm:px-6 pt-6 max-w-2xl mx-auto">
         <AnimatePresence mode="wait">
 
           {/* ── SAVED DEALS ── */}
           {tab === 'saved' && (
             <motion.div key="saved" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               {savedDeals.length === 0 ? (
-                <div className="text-center py-20 text-gray-400">
-                  <Bookmark size={40} className="mx-auto mb-3 opacity-30" />
-                  <p className="font-medium text-gray-600">No saved deals yet</p>
-                  <p className="text-sm mt-1">Tap the bookmark icon on any deal to save it</p>
-                  <Link href="/" className="inline-block mt-4 text-emerald-600 font-medium hover:underline text-sm">
-                    Browse deals →
+                <div className="flex flex-col items-center text-center py-20 px-6">
+                  <div className="w-14 h-14 rounded-full bg-slate-800/80 border border-white/10 flex items-center justify-center mb-4">
+                    <Bookmark size={24} className="text-slate-500" />
+                  </div>
+                  <p className="font-semibold text-sm text-slate-200">No saved deals yet</p>
+                  <p className="text-sm text-slate-500 mt-1 max-w-xs leading-relaxed">Tap the bookmark icon on any deal to save it for later</p>
+                  <Link
+                    href="/"
+                    className="inline-flex items-center gap-1 mt-5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-2 text-xs font-semibold text-white shadow-neon-violet transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                  >
+                    Browse deals <ChevronRight size={14} />
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {savedDeals.map((s) => (
+                <div className="space-y-3">
+                  {savedDeals.map((s, i) => (
                     <motion.div
                       key={s.id}
                       layout
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: -20 }}
-                      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex"
+                      transition={{ duration: 0.2, ease: 'easeOut', delay: i * 0.05 }}
+                      className="card-press flex bg-slate-900/80 border border-white/10 rounded-2xl overflow-hidden"
                     >
                       {s.deals?.image ? (
                         <img src={s.deals.image} alt={s.deals.title} className="w-24 h-24 object-cover shrink-0" />
                       ) : (
-                        <div className="w-24 h-24 bg-gradient-to-br from-emerald-100 to-teal-100 shrink-0" />
+                        <div className="w-24 h-24 bg-slate-800 shrink-0" />
                       )}
                       <div className="flex-1 p-3 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="font-semibold text-sm truncate">{s.deals?.title}</p>
+                            <p className="font-semibold text-sm text-slate-100 truncate">{s.deals?.title}</p>
                             {s.deals?.category && (
-                              <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full capitalize">
+                              <span className="inline-block mt-1 text-xs bg-violet-500/10 text-violet-300 border border-violet-500/20 px-2 py-0.5 rounded-full capitalize">
                                 {getCategoryLabel(s.deals.category)}
                               </span>
                             )}
-                            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                               <MapPin size={10} />
                               {[s.deals?.area, s.deals?.city].filter(Boolean).join(', ') || 'Location not set'}
                             </p>
-                            <p className="text-xs text-gray-400 mt-0.5">
+                            <p className="text-xs text-slate-500 mt-0.5">
                               Valid till {s.deals?.valid_till_date
                                 ? new Date(s.deals.valid_till_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
                                 : 'No expiry'}
                             </p>
                           </div>
-                          <button onClick={() => removeSaved(s.id)} className="text-gray-300 hover:text-red-400 transition shrink-0">
+                          <button
+                            onClick={() => removeSaved(s.id)}
+                            aria-label="Remove saved deal"
+                            className="text-slate-600 hover:text-rose-400 transition shrink-0 p-1 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                          >
                             <Trash2 size={15} />
                           </button>
                         </div>
                         <Link
                           href={`/deal/${s.deals?.id}`}
-                          className="mt-2 text-xs text-emerald-600 font-medium flex items-center gap-1 hover:gap-2 transition-all"
+                          className="mt-2 w-fit text-xs text-violet-400 font-medium flex items-center gap-1 hover:gap-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded"
                         >
                           View deal <ChevronRight size={12} />
                         </Link>
@@ -337,50 +350,61 @@ export default function UserProfilePage() {
           {tab === 'reviews' && (
             <motion.div key="reviews" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               {reviews.length === 0 ? (
-                <div className="text-center py-20 text-gray-400">
-                  <Star size={40} className="mx-auto mb-3 opacity-30" />
-                  <p className="font-medium text-gray-600">No reviews yet</p>
-                  <p className="text-sm mt-1">Rate deals you&apos;ve visited to share with the community</p>
-                  <Link href="/" className="inline-block mt-4 text-emerald-600 font-medium hover:underline text-sm">
-                    Browse deals →
+                <div className="flex flex-col items-center text-center py-20 px-6">
+                  <div className="w-14 h-14 rounded-full bg-slate-800/80 border border-white/10 flex items-center justify-center mb-4">
+                    <Star size={24} className="text-slate-500" />
+                  </div>
+                  <p className="font-semibold text-sm text-slate-200">No reviews yet</p>
+                  <p className="text-sm text-slate-500 mt-1 max-w-xs leading-relaxed">Rate deals you&apos;ve visited to share with the community</p>
+                  <Link
+                    href="/"
+                    className="inline-flex items-center gap-1 mt-5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-2 text-xs font-semibold text-white shadow-neon-violet transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                  >
+                    Browse deals <ChevronRight size={14} />
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {reviews.map((review) => (
-                    <div key={review.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex">
+                <div className="space-y-3">
+                  {reviews.map((review, i) => (
+                    <motion.div
+                      key={review.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeOut', delay: i * 0.05 }}
+                      className="flex bg-slate-900/80 border border-white/10 rounded-2xl overflow-hidden"
+                    >
                       {review.deals?.image ? (
                         <img src={review.deals.image} alt={review.deals.title} className="w-24 h-24 object-cover shrink-0" />
                       ) : (
-                        <div className="w-24 h-24 bg-gradient-to-br from-amber-100 to-orange-100 shrink-0" />
+                        <div className="w-24 h-24 bg-slate-800 shrink-0" />
                       )}
                       <div className="flex-1 p-3 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="font-semibold text-sm truncate">{review.deals?.title || 'Deal'}</p>
-                            <p className="text-xs text-amber-500 mt-0.5">
+                            <p className="font-semibold text-sm text-slate-100 truncate">{review.deals?.title || 'Deal'}</p>
+                            <p className="text-xs text-amber-400 mt-0.5">
                               {'★'.repeat(review.rating)}{'☆'.repeat(Math.max(0, 5 - review.rating))}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                               <MapPin size={10} />
                               {[review.deals?.area, review.deals?.city].filter(Boolean).join(', ') || 'Location not set'}
                             </p>
                             {review.comment && (
-                              <p className="text-xs text-gray-600 mt-1 line-clamp-2">{review.comment}</p>
+                              <p className="text-xs text-slate-400 mt-1 line-clamp-2">{review.comment}</p>
                             )}
-                            <p className="text-[11px] text-gray-400 mt-1">
+                            <p className="text-[11px] text-slate-500 mt-1">
                               {new Date(review.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </p>
                           </div>
                         </div>
                         <Link
                           href={`/deal/${review.deal_id}`}
-                          className="mt-2 text-xs text-emerald-600 font-medium flex items-center gap-1 hover:gap-2 transition-all"
+                          className="mt-2 w-fit text-xs text-violet-400 font-medium flex items-center gap-1 hover:gap-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded"
                         >
                           View deal <ChevronRight size={12} />
                         </Link>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               )}
@@ -390,67 +414,68 @@ export default function UserProfilePage() {
           {/* ── ACCOUNT ── */}
           {tab === 'account' && (
             <motion.div key="account" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="space-y-4">
+              className="space-y-6">
 
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-50">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Account Info</p>
+              <div className="bg-slate-900/80 border border-white/10 rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-white/10">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Account Info</p>
                 </div>
                 <div className="px-5 py-4 flex items-center gap-3">
-                  <UserIcon size={16} className="text-gray-400" />
+                  <UserIcon size={16} className="text-slate-500" />
                   <div>
-                    <p className="text-xs text-gray-400">Name</p>
-                    <p className="font-medium text-sm text-gray-800">{displayName}</p>
+                    <p className="text-xs text-slate-500">Name</p>
+                    <p className="font-medium text-sm text-slate-200">{displayName}</p>
                   </div>
                 </div>
-                <div className="px-5 py-4 border-t border-gray-50 flex items-center gap-3">
-                  <Mail size={16} className="text-gray-400" />
+                <div className="px-5 py-4 border-t border-white/10 flex items-center gap-3">
+                  <Mail size={16} className="text-slate-500" />
                   <div>
-                    <p className="text-xs text-gray-400">Email</p>
-                    <p className="font-medium text-sm text-gray-800">{user?.email}</p>
+                    <p className="text-xs text-slate-500">Email</p>
+                    <p className="font-medium text-sm text-slate-200">{user?.email}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-50">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Activity</p>
+              <div className="bg-slate-900/80 border border-white/10 rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-white/10">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Activity</p>
                 </div>
                 <div className="px-5 py-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Bookmark size={16} className="text-emerald-500" />
-                    <p className="text-sm text-gray-700">Saved deals</p>
+                    <Bookmark size={16} className="text-violet-400" />
+                    <p className="text-sm text-slate-300">Saved deals</p>
                   </div>
-                  <span className="font-bold text-emerald-600">{savedDeals.length}</span>
+                  <span className="font-bold text-violet-300">{savedDeals.length}</span>
                 </div>
-                <div className="px-5 py-4 border-t border-gray-50 flex items-center justify-between">
+                <div className="px-5 py-4 border-t border-white/10 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Star size={16} className="text-amber-500" />
-                    <p className="text-sm text-gray-700">Reviews posted</p>
+                    <Star size={16} className="text-amber-400" />
+                    <p className="text-sm text-slate-300">Reviews posted</p>
                   </div>
-                  <span className="font-bold text-amber-600">{reviews.length}</span>
+                  <span className="font-bold text-amber-300">{reviews.length}</span>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">My Interests</p>
+              <div className="bg-slate-900/80 border border-white/10 rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">My Interests</p>
                   <button
                     onClick={() => setEditingInterests(true)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-100 transition"
+                    aria-label="Edit interests"
+                    className="inline-flex items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-xs font-semibold text-violet-300 hover:bg-violet-500/20 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                   >
                     <Sparkles size={12} /> Edit
                   </button>
                 </div>
                 <div className="px-5 py-4">
                   {interests.length === 0 ? (
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-slate-500">
                       No interests picked yet — add some to get a personalized feed.
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {interests.map((cat) => (
-                        <span key={cat} className="inline-flex items-center gap-1 rounded-full bg-violet-50 border border-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
+                        <span key={cat} className="inline-flex items-center gap-1 rounded-full bg-slate-800/80 border border-white/10 px-2.5 py-1 text-xs font-medium text-slate-300">
                           <span>{getCategoryMeta(cat).emoji}</span>
                           {getCategoryLabel(cat)}
                         </span>
@@ -460,11 +485,11 @@ export default function UserProfilePage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-50">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Notifications</p>
+              <div className="bg-slate-900/80 border border-white/10 rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-white/10">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Notifications</p>
                 </div>
-                <div className="px-5 py-4 space-y-2 text-sm">
+                <div className="px-5 py-4 space-y-3 text-sm">
                   {[
                     { key: 'push_enabled', label: 'Push alerts' },
                     { key: 'whatsapp_enabled', label: 'WhatsApp alerts' },
@@ -473,39 +498,51 @@ export default function UserProfilePage() {
                     { key: 'new_nearby_enabled', label: 'New nearby deals' },
                   ].map((item) => (
                     <label key={item.key} className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-2"><Bell size={14} className="text-gray-400" /> {item.label}</span>
+                      <span className="inline-flex items-center gap-2 text-slate-300"><Bell size={14} className="text-slate-500" /> {item.label}</span>
                       <input
                         type="checkbox"
                         checked={notifPrefs[item.key as keyof typeof notifPrefs]}
                         onChange={(e) => setNotifPrefs((prev) => ({ ...prev, [item.key]: e.target.checked }))}
+                        className="accent-violet-500 w-4 h-4 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
                       />
                     </label>
                   ))}
-                  <button onClick={saveNotificationPrefs} className="mt-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">
+                  <button
+                    onClick={saveNotificationPrefs}
+                    className="mt-3 w-full sm:w-auto rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-2.5 text-xs font-semibold text-white shadow-neon-violet transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                  >
                     Save notification preferences
                   </button>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-50">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Referral & Invite</p>
+              <div className="bg-slate-900/80 border border-white/10 rounded-2xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-white/10">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Referral & Invite</p>
                 </div>
-                <div className="px-5 py-4 space-y-2">
-                  <p className="text-sm text-gray-700">Invites sent: <span className="font-semibold text-emerald-700">{referralCount}</span></p>
-                  <p className="rounded-lg bg-gray-50 px-3 py-2 font-mono text-xs text-gray-700">{referralCode}</p>
-                  <button onClick={copyReferralLink} className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
-                    <Share2 size={13} /> Invite friends
-                  </button>
-                  <button onClick={copyReferralLink} className="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700">
-                    <Copy size={13} /> Copy invite link
-                  </button>
+                <div className="px-5 py-4 space-y-3">
+                  <p className="text-sm text-slate-300">Invites sent: <span className="font-semibold text-violet-300">{referralCount}</span></p>
+                  <p className="rounded-xl bg-slate-800/80 border border-white/10 px-3 py-2 font-mono text-xs text-slate-300">{referralCode}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={copyReferralLink}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-500/20 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                    >
+                      <Share2 size={13} /> Invite friends
+                    </button>
+                    <button
+                      onClick={copyReferralLink}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-800/80 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                    >
+                      <Copy size={13} /> Copy invite link
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 py-3.5 rounded-2xl font-medium hover:bg-red-100 transition"
+                className="w-full flex items-center justify-center gap-2 bg-rose-500/10 border border-rose-500/20 text-rose-400 py-3.5 rounded-2xl font-semibold hover:bg-rose-500/20 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
               >
                 <LogOut size={16} />
                 Sign Out
