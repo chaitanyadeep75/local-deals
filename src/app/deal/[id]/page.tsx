@@ -93,7 +93,7 @@ export default function DealDetailPage() {
 
   const loginRedirect = useMemo(() => {
     const next = incomingRef ? `/deal/${dealId}?ref=${encodeURIComponent(incomingRef)}` : `/deal/${dealId}`;
-    return `/user/login?next=${encodeURIComponent(next)}`;
+    return `/login?next=${encodeURIComponent(next)}`;
   }, [dealId, incomingRef]);
 
   useEffect(() => {

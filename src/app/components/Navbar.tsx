@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { User, Mail, LogOut, LayoutDashboard, Bookmark, Sparkles, MapPinned, House, Shield, Zap, ChevronDown } from 'lucide-react';
 import { supabase } from '@/app/lib/supabase';
+import { isBusinessRole } from '@/app/lib/auth-role';
 
 export default function Navbar() {
   const router = useRouter();
@@ -20,11 +21,8 @@ export default function Navbar() {
   useEffect(() => {
     const detectIsBusiness = async (nextUser: SupabaseUser) => {
       const role = nextUser?.user_metadata?.role;
-      if (role === 'business') return true;
+      if (isBusinessRole(nextUser)) return true;
       if (role === 'user') return false;
-      const hint = typeof window !== 'undefined' ? localStorage.getItem('ld_role_hint') : null;
-      if (hint === 'business') return true;
-      if (hint === 'user') return false;
       const { count } = await supabase
         .from('deals')
         .select('id', { count: 'exact', head: true })
@@ -75,7 +73,6 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem('ld_role_hint');
     setUser(null);
     router.push('/');
   };
@@ -164,16 +161,10 @@ export default function Navbar() {
           {!user ? (
             <div className="flex items-center gap-2 ml-1">
               <Link
-                href="/user/login"
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 transition-all duration-200 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 md:px-4 md:py-2 md:text-sm"
-              >
-                Sign In
-              </Link>
-              <Link
                 href="/login"
                 className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-3 py-1.5 text-xs font-semibold text-white shadow-neon-violet transition-all duration-200 hover:opacity-90 hover:shadow-[0_0_28px_rgba(139,92,246,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 md:px-4 md:py-2 md:text-sm"
               >
-                Business
+                Sign In
               </Link>
             </div>
           ) : (

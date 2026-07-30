@@ -44,7 +44,7 @@ function ResetContent() {
     setLoading(false);
     if (error) { setError(error.message); return; }
     setDone(true);
-    setTimeout(() => router.push('/user/login'), 2500);
+    setTimeout(() => router.push('/login'), 2500);
   };
 
   const strength = getStrength(password);

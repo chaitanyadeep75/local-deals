@@ -206,7 +206,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
     const uid = await ensureUser();
     if (!uid) {
       const next = encodeURIComponent(pathname || '/');
-      router.push(`/user/login?next=${next}`);
+      router.push(`/login?next=${next}`);
       return;
     }
     setSaveLoading(true);
@@ -318,7 +318,7 @@ export default function DealCard({ deal, userLat, userLng, onUnsave }: {
     const uid = await ensureUser();
     if (!uid) {
       const next = encodeURIComponent(pathname || '/');
-      router.push(`/user/login?next=${next}`);
+      router.push(`/login?next=${next}`);
       return;
     }
     if (submitting) return;

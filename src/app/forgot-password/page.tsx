@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
                       try again
                     </button>
                   </p>
-                  <Link href="/user/login"
+                  <Link href="/login"
                     className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
                     <ArrowLeft size={14} /> Back to Login
                   </Link>
@@ -106,7 +106,7 @@ export default function ForgotPasswordPage() {
                   </form>
 
                   <div className="mt-6 border-t border-white/8 pt-6 text-center">
-                    <Link href="/user/login"
+                    <Link href="/login"
                       className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-sm text-slate-500 transition hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
                       <ArrowLeft size={13} /> Back to Login
                     </Link>

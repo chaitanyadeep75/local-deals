@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/app/lib/supabase';
 import { trackEvent } from '@/app/lib/analytics';
+import { isBusinessRole } from '@/app/lib/auth-role';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
@@ -27,7 +28,7 @@ export default function MobileBottomNav() {
       const { data } = await supabase.auth.getUser();
       if (!data.user) return;
       setUser(data.user);
-      setIsBusiness(data.user.user_metadata?.role === 'business');
+      setIsBusiness(isBusinessRole(data.user));
       if (data.user.user_metadata?.role === 'admin') setIsAdmin(true);
       else {
         const row = await supabase
@@ -41,7 +42,7 @@ export default function MobileBottomNav() {
     init();
     const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null);
-      setIsBusiness(session?.user?.user_metadata?.role === 'business');
+      setIsBusiness(isBusinessRole(session?.user));
       setIsAdmin(session?.user?.user_metadata?.role === 'admin');
     });
     return () => listener.subscription.unsubscribe();
@@ -63,7 +64,7 @@ export default function MobileBottomNav() {
     ? { href: '/business/dashboard', label: 'Dash', Icon: LayoutDashboard }
     : user
     ? { href: '/saved', label: 'Saved', Icon: Bookmark }
-    : { href: '/user/login', label: 'Login', Icon: UserCircle2 };
+    : { href: '/login', label: 'Login', Icon: UserCircle2 };
 
   return (
     <nav
@@ -110,9 +111,8 @@ export default function MobileBottomNav() {
         {/* ── Me / Account ── */}
         <button
           onClick={async () => {
-            if (!user) { router.push('/user/signup'); return; }
+            if (!user) { router.push('/signup'); return; }
             await supabase.auth.signOut();
-            localStorage.removeItem('ld_role_hint');
             void trackEvent('mobile_logout', { source: 'mobile_bottom_nav' });
             router.push('/');
           }}

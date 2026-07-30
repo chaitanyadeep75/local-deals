@@ -116,7 +116,7 @@ export default function SavedDealsPage() {
             Save deals you love and find them here anytime, on any device.
           </p>
           <Link
-            href="/user/login?next=%2Fsaved"
+            href="/login?next=%2Fsaved"
             className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
           >
             Sign In

@@ -17,25 +17,32 @@ function CallbackHandler() {
         await supabase.auth.exchangeCodeForSession(code);
       }
 
-      // Set role hint for newly OAuth-authenticated users
       const { data } = await supabase.auth.getUser();
+      let role = data.user?.user_metadata?.role as string | undefined;
+
       if (data.user) {
-        const role = data.user.user_metadata?.role;
-        if (!role || role === 'user') {
-          localStorage.setItem('ld_role_hint', 'user');
+        // A fresh OAuth signup (account created moments ago) that started
+        // from the Business tab carries `role=business` through this
+        // redirect — apply it once, the same way `ref` is threaded below.
+        const roleParam = params.get('role');
+        const createdAt = data.user.created_at ? new Date(data.user.created_at).getTime() : 0;
+        const isFreshSignup = !!createdAt && Date.now() - createdAt < 2 * 60 * 1000;
+
+        if (roleParam === 'business' && !role && isFreshSignup) {
+          await supabase.auth.updateUser({ data: { ...data.user.user_metadata, role: 'business' } });
+          role = 'business';
         }
 
-        // Attribute a referral only if this account was created moments ago
-        // (a fresh OAuth signup), not on every subsequent Google login.
+        // Attribute a referral only on that same fresh-signup window, not on
+        // every subsequent login.
         const refCode = params.get('ref');
-        const createdAt = data.user.created_at ? new Date(data.user.created_at).getTime() : 0;
-        if (refCode && createdAt && Date.now() - createdAt < 2 * 60 * 1000) {
+        if (refCode && isFreshSignup) {
           void attributeReferral(refCode, data.user.id);
         }
       }
 
       const next = params.get('next') || '/';
-      router.replace(next);
+      router.replace(role === 'business' ? '/business/dashboard' : next);
     };
     run();
   }, [params, router]);

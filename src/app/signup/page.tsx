@@ -1,414 +1,283 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
-import { CATEGORY_OPTIONS } from '@/app/lib/categories';
+import { attributeReferral } from '@/app/lib/growth';
 import Link from 'next/link';
-import {
-  Mail, Lock, Store, UserPlus, User, Phone, MapPin,
-  FileText, Globe, AlertCircle, CheckCircle2, ChevronRight, ChevronLeft,
-  Sparkles, Shield, Zap,
-} from 'lucide-react';
+import { Mail, Lock, User, Zap, Store, AlertCircle, Eye, EyeOff, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
 
-const PHONE_RE = /^[6-9]\d{9}$/;
-const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-const URL_RE   = /^https?:\/\/.+/;
+function getStrength(pw: string): number {
+  let s = 0;
+  if (pw.length >= 8) s++;
+  if (/[A-Z]/.test(pw)) s++;
+  if (/[0-9]/.test(pw)) s++;
+  if (/[^A-Za-z0-9]/.test(pw)) s++;
+  return s;
+}
+const STRENGTH_LABEL = ['', 'Weak', 'Fair', 'Good', 'Strong'] as const;
+const STRENGTH_COLOR = ['', 'bg-red-500', 'bg-amber-500', 'bg-yellow-400', 'bg-emerald-500'] as const;
+const STRENGTH_TEXT  = ['', 'text-red-400', 'text-amber-400', 'text-yellow-400', 'text-emerald-400'] as const;
+import { motion, AnimatePresence } from 'framer-motion';
 
-const inputCls = 'w-full bg-transparent text-sm text-slate-200 placeholder-slate-600 outline-none';
-const wrapCls  = 'mt-1.5 flex items-center gap-2.5 rounded-2xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-violet-500/40 focus-within:ring-2 focus-within:ring-violet-500/20 hover:border-white/20';
-const labelCls = 'block text-xs font-semibold uppercase tracking-wide text-slate-400';
-
-function FieldError({ msg }: { msg: string | null }) {
-  if (!msg) return null;
+function GoogleIcon() {
   return (
-    <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-rose-400">
-      <AlertCircle size={11} /> {msg}
-    </p>
+    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
   );
 }
 
-const STEPS = [
-  { label: 'Account', icon: Shield },
-  { label: 'Business', icon: Store },
-  { label: 'Extras', icon: Sparkles },
-];
+type AccountType = 'user' | 'business';
 
 export default function SignupPage() {
-  const [email, setEmail]       = useState('');
+  const [accountType, setAccountType] = useState<AccountType>('user');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  const [businessName, setBusinessName]   = useState('');
-  const [ownerName, setOwnerName]         = useState('');
-  const [phone, setPhone]                 = useState('');
-  const [city, setCity]                   = useState('');
-  const [category, setCategory]           = useState('');
-  const [description, setDescription]     = useState('');
-
-  const [gstin, setGstin]         = useState('');
-  const [website, setWebsite]     = useState('');
-  const [instagram, setInstagram] = useState('');
-
-  const [step, setStep]       = useState<1 | 2 | 3>(1);
-  const [errors, setErrors]   = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [success, setSuccess]   = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [refCode, setRefCode] = useState<string | null>(null);
 
-  function validate(currentStep: number): boolean {
-    const e: Record<string, string> = {};
-    if (currentStep === 1) {
-      if (!email.trim())                    e.email    = 'Email is required';
-      else if (!/\S+@\S+\.\S+/.test(email)) e.email   = 'Enter a valid email';
-      if (!password)                        e.password = 'Password is required';
-      else if (password.length < 6)        e.password = 'Minimum 6 characters';
-    }
-    if (currentStep === 2) {
-      if (!businessName.trim())                  e.businessName = 'Business name is required';
-      else if (businessName.trim().length < 3)   e.businessName = 'Minimum 3 characters';
-      if (!ownerName.trim())                     e.ownerName = 'Owner name is required';
-      else if (ownerName.trim().length < 2)      e.ownerName = 'Minimum 2 characters';
-      if (!phone.trim())                         e.phone = 'Phone number is required';
-      else if (!PHONE_RE.test(phone.trim()))     e.phone = 'Enter a valid 10-digit Indian mobile number';
-      if (!city.trim())                          e.city = 'City is required';
-      if (!category)                             e.category = 'Select a business category';
-      if (!description.trim())                   e.description = 'Description is required';
-      else if (description.trim().length < 50)   e.description = `Minimum 50 characters (${description.trim().length}/50)`;
-    }
-    if (currentStep === 3) {
-      if (gstin.trim() && !GSTIN_RE.test(gstin.trim().toUpperCase()))
-        e.gstin = 'Invalid GSTIN format (e.g. 29ABCDE1234F1Z5)';
-      if (website.trim() && !URL_RE.test(website.trim()))
-        e.website = 'Must start with https://';
-    }
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('ref');
+    if (code) setRefCode(code);
+  }, []);
 
-  const next = () => { if (validate(step)) setStep((s) => (s < 3 ? ((s + 1) as 1|2|3) : s)); };
-  const back = () => setStep((s) => (s > 1 ? ((s - 1) as 1|2|3) : s));
+  const isBusiness = accountType === 'business';
 
-  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!validate(3)) return;
-    setLoading(true); setApiError(null);
-
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(), password,
+  const handleGoogle = async () => {
+    setGoogleLoading(true);
+    setError(null);
+    const params = new URLSearchParams();
+    if (refCode) params.set('ref', refCode);
+    if (isBusiness) params.set('role', 'business');
+    const query = params.toString();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
       options: {
-        data: {
-          role: 'business',
-          business_profile: {
-            shop_name: businessName.trim(), owner_name: ownerName.trim(),
-            phone: phone.trim(), city: city.trim(), category, about: description.trim(),
-            gstin: gstin.trim().toUpperCase() || null,
-            website: website.trim() || null, instagram: instagram.trim() || null,
-          },
-        },
+        redirectTo: `${window.location.origin}/auth/callback${query ? `?${query}` : ''}`,
+        queryParams: { prompt: 'select_account' },
       },
     });
+    if (error) { setError(error.message); setGoogleLoading(false); }
+  };
 
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+    setLoading(true);
+    setError(null);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name.trim(), role: accountType } },
+    });
     setLoading(false);
-    if (error) { setApiError(error.message); return; }
-    if (data.user?.id) {
-      await supabase.from('business_permissions').upsert({ user_id: data.user.id, status: 'approved', reason: null });
-    }
+    if (error) { setError(error.message); return; }
+    if (refCode && data.user) void attributeReferral(refCode, data.user.id);
     setSuccess(true);
   };
 
-  if (success) {
-    return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-16 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-violet-600/15 blur-[90px]" />
-          <div className="absolute bottom-1/3 left-1/4 h-48 w-48 rounded-full bg-fuchsia-600/10 blur-[60px]" />
-          <div className="absolute top-1/2 right-1/4 h-40 w-40 rounded-full bg-indigo-600/10 blur-[60px]" />
-        </div>
-        <div className="relative z-10 w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-slate-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
-          <div className="h-1 w-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-indigo-600" />
-          <div className="p-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 ring-1 ring-emerald-500/20">
-              <CheckCircle2 size={28} className="text-emerald-400" />
-            </div>
-            <h2 className="text-xl font-extrabold tracking-tight text-white">You&apos;re all set!</h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-400">
-              Check your email to verify your account. Business access is usually approved within 24 hours.
-            </p>
-            <Link
-              href="/login"
-              className="mt-6 flex items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
-            >
-              Go to Login
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
-      {/* Background orbs */}
+    <main className="relative min-h-screen px-4 pb-28 pt-8">
+      {/* Blobs */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-20 h-[600px] w-[600px] rounded-full bg-violet-700/20 blur-[140px] animate-aurora-1" />
-        <div className="absolute -right-40 bottom-0 h-[500px] w-[500px] rounded-full bg-indigo-700/20 blur-[140px] animate-aurora-2" />
-        <div className="absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-fuchsia-700/10 blur-[100px]" />
+        <div className={`absolute -top-16 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full blur-[90px] ${isBusiness ? 'bg-violet-600/15' : 'bg-emerald-600/15'}`} />
+        <div className={`absolute bottom-1/3 left-1/4 h-48 w-48 rounded-full blur-[60px] ${isBusiness ? 'bg-fuchsia-600/10' : 'bg-violet-600/10'}`} />
       </div>
 
-      <div className="relative z-10 w-full max-w-lg">
-        {/* Top perks bar */}
-        <div className="mb-5 flex items-center justify-center gap-6">
-          {[
-            { icon: Zap, text: 'Free listing' },
-            { icon: Shield, text: 'Verified badge' },
-            { icon: Sparkles, text: 'Instant reach' },
-          ].map(({ icon: Icon, text }) => (
-            <div key={text} className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-              <Icon size={12} className="text-violet-400" /> {text}
-            </div>
-          ))}
-        </div>
-
-        {/* Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="relative w-full"
+      >
         <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
-          <div className="h-1 w-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-indigo-600" />
-
-          {/* Header */}
-          <div className="px-7 pb-6 pt-7 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-neon-violet">
-              <Store size={20} className="text-white" />
-            </div>
-            <h1 className="text-xl font-extrabold tracking-tight text-white">Business Signup</h1>
-            <p className="mt-1 text-sm text-slate-500">Start listing your deals today</p>
-
-            {/* Step progress */}
-            <div className="relative mt-6 flex items-center justify-center">
-              <div className="absolute top-[14px] left-1/2 h-px w-52 -translate-x-1/2 bg-white/10" />
-              <div
-                className="absolute top-[14px] left-1/2 h-px -translate-x-1/2 bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
-                style={{ width: step === 1 ? 0 : step === 2 ? '8rem' : '13rem' }}
-              />
-              <div className="relative flex items-center gap-16">
-                {STEPS.map(({ label, icon: Icon }, i) => {
-                  const n = i + 1;
-                  const active = step === n;
-                  const done = step > n;
-                  return (
-                    <div key={label} className="flex flex-col items-center gap-1.5">
-                      <div className={`relative flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ring-2 transition-all duration-300
-                        ${done   ? 'bg-emerald-500 ring-emerald-400/40 text-white scale-95'
-                        : active ? 'scale-110 bg-gradient-to-br from-violet-500 to-fuchsia-600 ring-violet-400/40 text-white shadow-neon-violet'
-                                 : 'bg-white/5 ring-white/10 text-slate-500'}`}>
-                        {done ? <CheckCircle2 size={14} /> : <Icon size={12} />}
-                      </div>
-                      <span className={`text-[11px] font-semibold tracking-wide transition-colors duration-300
-                        ${active ? 'text-white' : done ? 'text-emerald-400' : 'text-slate-500'}`}>
-                        {label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Form body */}
-          <form onSubmit={handleSubmit} className="space-y-5 border-t border-white/8 p-7">
-
-            {/* ── Step 1: Account ── */}
-            {step === 1 && (
-              <>
-                <div className="text-xs font-semibold uppercase tracking-wide text-violet-400">Step 1 — Credentials</div>
-                <div>
-                  <label className={labelCls}>Business Email <span className="text-violet-400">*</span></label>
-                  <div className={wrapCls}>
-                    <Mail size={15} className="shrink-0 text-slate-500" />
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                      className={inputCls} placeholder="business@email.com" autoComplete="email" />
+          <div className="p-7">
+            <AnimatePresence mode="wait">
+              {success ? (
+                <motion.div
+                  key="success"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="py-6 text-center"
+                >
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/20 border border-emerald-500/30 shadow-neon-emerald">
+                    <CheckCircle2 size={28} className="text-emerald-400" />
                   </div>
-                  <FieldError msg={errors.email ?? null} />
-                </div>
-                <div>
-                  <label className={labelCls}>Password <span className="text-violet-400">*</span></label>
-                  <div className={wrapCls}>
-                    <Lock size={15} className="shrink-0 text-slate-500" />
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                      className={inputCls} placeholder="Minimum 6 characters" autoComplete="new-password" />
-                  </div>
-                  <FieldError msg={errors.password ?? null} />
-                </div>
-                <p className="rounded-xl border border-violet-500/20 bg-violet-500/10 px-4 py-3 text-xs leading-relaxed text-violet-300">
-                  <span className="font-semibold text-violet-200">You&apos;re creating a business account.</span> Your listing will go live after admin verification — usually within 24 hours.
-                </p>
-              </>
-            )}
-
-            {/* ── Step 2: Business Info ── */}
-            {step === 2 && (
-              <>
-                <div className="text-xs font-semibold uppercase tracking-wide text-violet-400">Step 2 — Business Details</div>
-                <div>
-                  <label className={labelCls}>Business Name <span className="text-violet-400">*</span></label>
-                  <div className={wrapCls}>
-                    <Store size={15} className="shrink-0 text-slate-500" />
-                    <input value={businessName} onChange={(e) => setBusinessName(e.target.value)}
-                      className={inputCls} placeholder="e.g. Sharma Electronics" />
-                  </div>
-                  <FieldError msg={errors.businessName ?? null} />
-                </div>
-                <div>
-                  <label className={labelCls}>Owner / Contact Name <span className="text-violet-400">*</span></label>
-                  <div className={wrapCls}>
-                    <User size={15} className="shrink-0 text-slate-500" />
-                    <input value={ownerName} onChange={(e) => setOwnerName(e.target.value)}
-                      className={inputCls} placeholder="e.g. Ravi Sharma" />
-                  </div>
-                  <FieldError msg={errors.ownerName ?? null} />
-                </div>
-                <div>
-                  <label className={labelCls}>Phone Number <span className="text-violet-400">*</span></label>
-                  <div className={wrapCls}>
-                    <Phone size={15} className="shrink-0 text-slate-500" />
-                    <span className="text-sm font-semibold text-slate-500">+91</span>
-                    <div className="h-4 w-px bg-white/10" />
-                    <input type="tel" maxLength={10} value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                      className={inputCls} placeholder="10-digit mobile number" />
-                  </div>
-                  <FieldError msg={errors.phone ?? null} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelCls}>City <span className="text-violet-400">*</span></label>
-                    <div className={wrapCls}>
-                      <MapPin size={15} className="shrink-0 text-slate-500" />
-                      <input value={city} onChange={(e) => setCity(e.target.value)}
-                        className={inputCls} placeholder="e.g. Bengaluru" />
-                    </div>
-                    <FieldError msg={errors.city ?? null} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Category <span className="text-violet-400">*</span></label>
-                    <select value={category} onChange={(e) => setCategory(e.target.value)}
-                      className="mt-1.5 w-full rounded-2xl border border-white/10 bg-slate-800/80 px-3.5 py-3 text-sm text-slate-200 outline-none transition focus:border-violet-500/40 focus:ring-2 focus:ring-violet-500/20 hover:border-white/20">
-                      <option value="" className="bg-slate-900">Select…</option>
-                      {CATEGORY_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value} className="bg-slate-900">{opt.label}</option>
-                      ))}
-                    </select>
-                    <FieldError msg={errors.category ?? null} />
-                  </div>
-                </div>
-                <div>
-                  <label className={labelCls}>
-                    About your business <span className="text-violet-400">*</span>
-                    <span className="ml-1.5 text-xs font-normal normal-case text-slate-500">({description.trim().length}/50 min)</span>
-                  </label>
-                  <div className="mt-1.5 overflow-hidden rounded-2xl border border-white/10 bg-slate-800/80 transition focus-within:border-violet-500/40 focus-within:ring-2 focus-within:ring-violet-500/20 hover:border-white/20">
-                    <div className="flex items-start gap-2.5 px-3.5 pt-3">
-                      <FileText size={15} className="mt-0.5 shrink-0 text-slate-500" />
-                      <textarea value={description} onChange={(e) => setDescription(e.target.value)}
-                        rows={3} className="w-full resize-none bg-transparent text-sm text-slate-200 placeholder-slate-600 outline-none"
-                        placeholder="Tell customers what you offer, your specialty, timings, etc." />
-                    </div>
-                    <div className="flex items-center justify-between px-3.5 pb-2.5 pt-1">
-                      <span className="text-[11px] text-slate-500">Describe your offerings in detail</span>
-                      <span className={`text-[11px] font-medium ${description.trim().length >= 50 ? 'text-emerald-400' : 'text-slate-500'}`}>
-                        {description.length} chars
-                      </span>
-                    </div>
-                  </div>
-                  <FieldError msg={errors.description ?? null} />
-                </div>
-              </>
-            )}
-
-            {/* ── Step 3: Optional Extras ── */}
-            {step === 3 && (
-              <>
-                <div className="text-xs font-semibold uppercase tracking-wide text-violet-400">Step 3 — Optional Extras</div>
-                <p className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs text-amber-300">
-                  All fields on this step are optional — you can add these later from your dashboard.
-                </p>
-                <div>
-                  <label className={labelCls}>GSTIN</label>
-                  <div className={wrapCls}>
-                    <Shield size={15} className="shrink-0 text-slate-500" />
-                    <input value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())}
-                      maxLength={15} className={`${inputCls} font-mono tracking-wider`} placeholder="29ABCDE1234F1Z5" />
-                  </div>
-                  <FieldError msg={errors.gstin ?? null} />
-                </div>
-                <div>
-                  <label className={labelCls}>Website</label>
-                  <div className={wrapCls}>
-                    <Globe size={15} className="shrink-0 text-slate-500" />
-                    <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)}
-                      className={inputCls} placeholder="https://yourbusiness.com" />
-                  </div>
-                  <FieldError msg={errors.website ?? null} />
-                </div>
-                <div>
-                  <label className={labelCls}>Instagram Handle</label>
-                  <div className={wrapCls}>
-                    <span className="text-sm font-bold text-slate-500">@</span>
-                    <input value={instagram} onChange={(e) => setInstagram(e.target.value.replace('@', ''))}
-                      className={inputCls} placeholder="yourbusiness" />
-                  </div>
-                </div>
-                {apiError && (
-                  <div className="flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3.5 py-3 text-sm text-rose-400">
-                    <AlertCircle size={14} className="mt-0.5 shrink-0" />
-                    {apiError}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Navigation */}
-            <div className="flex gap-3 pt-1">
-              {step > 1 && (
-                <button type="button" onClick={back}
-                  className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-300 transition hover:border-white/20 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 active:scale-95">
-                  <ChevronLeft size={15} /> Back
-                </button>
-              )}
-              {step < 3 ? (
-                <button type="button" onClick={next}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 hover:shadow-[0_0_32px_rgba(139,92,246,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 active:scale-[0.98]">
-                  Continue <ChevronRight size={16} />
-                </button>
+                  <h2 className="text-xl font-extrabold tracking-tight text-white">You&apos;re in!</h2>
+                  <p className="mt-2 text-sm text-slate-500">
+                    Check your email to verify your account, then sign in.
+                  </p>
+                  <Link
+                    href="/login"
+                    className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 text-sm font-bold text-white shadow-neon-emerald hover:opacity-90 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                  >
+                    Go to Sign In <ArrowRight size={15} />
+                  </Link>
+                </motion.div>
               ) : (
-                <button type="submit" disabled={loading}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-bold text-white shadow-neon-violet transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 active:scale-[0.98]">
-                  {loading ? (
-                    <>
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                      Creating account…
-                    </>
-                  ) : (
-                    <><UserPlus size={16} /> Create Account</>
-                  )}
-                </button>
-              )}
-            </div>
-          </form>
+                <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  {/* Account type toggle */}
+                  <div className="mb-5 flex gap-1 rounded-full border border-white/8 bg-white/5 p-1">
+                    {(['user', 'business'] as AccountType[]).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setAccountType(t)}
+                        className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
+                          ${accountType === t ? 'bg-white/15 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                      >
+                        {t === 'user' ? <Zap size={13} /> : <Store size={13} />}
+                        {t === 'user' ? 'Shopper' : 'Business'}
+                      </button>
+                    ))}
+                  </div>
 
-          {/* Footer */}
-          <div className="border-t border-white/8 px-7 py-5 text-center text-sm">
-            <p className="text-slate-500">
-              Already have an account?{' '}
-              <Link href="/login" className="rounded font-semibold text-violet-400 transition hover:text-violet-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40">
-                Sign in
-              </Link>
-            </p>
+                  {/* Header */}
+                  <div className="mb-6 text-center">
+                    <div className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br shadow-neon-emerald ${isBusiness ? 'from-violet-500 to-fuchsia-600 shadow-neon-violet' : 'from-emerald-400 to-teal-500'}`}>
+                      {isBusiness ? <Store size={20} className="text-white" /> : <Zap size={20} className="text-white" fill="white" />}
+                    </div>
+                    <h1 className="text-xl font-extrabold tracking-tight text-white">{isBusiness ? 'Business Signup' : 'Create account'}</h1>
+                    <p className="mt-1 text-sm text-slate-500">{isBusiness ? 'List your deals and reach local customers' : 'Save deals, write reviews, get notified'}</p>
+                  </div>
+
+                  {/* Google */}
+                  <button
+                    onClick={handleGoogle}
+                    disabled={googleLoading || loading}
+                    className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 hover:border-white/20 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                  >
+                    {googleLoading
+                      ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      : <GoogleIcon />
+                    }
+                    Sign up with Google
+                  </button>
+
+                  {/* Divider */}
+                  <div className="my-4 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-white/8" />
+                    <span className="text-xs font-medium text-slate-600">or with email</span>
+                    <div className="h-px flex-1 bg-white/8" />
+                  </div>
+
+                  {/* Error */}
+                  <AnimatePresence>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
+                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        className="flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3.5 py-3 text-sm text-rose-400"
+                      >
+                        <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                        {error}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Form */}
+                  <form onSubmit={handleSignup} className="space-y-3.5">
+                    {/* Name */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">{isBusiness ? 'Business Name' : 'Full Name'}</label>
+                      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                        <User size={15} className="shrink-0 text-slate-500" />
+                        <input
+                          type="text" required value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder={isBusiness ? 'Your shop or business name' : 'Your name'}
+                          className="flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder-slate-600"
+                          style={{ border: 'none', padding: 0, boxShadow: 'none', background: 'transparent' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Email</label>
+                      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                        <Mail size={15} className="shrink-0 text-slate-500" />
+                        <input
+                          type="email" required value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="you@email.com"
+                          className="flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder-slate-600"
+                          style={{ border: 'none', padding: 0, boxShadow: 'none', background: 'transparent' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Password */}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Password</label>
+                      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-800/80 px-3.5 py-3 transition focus-within:border-emerald-500/40 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                        <Lock size={15} className="shrink-0 text-slate-500" />
+                        <input
+                          type={showPassword ? 'text' : 'password'} required value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Min. 6 characters"
+                          className="flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder-slate-600"
+                          style={{ border: 'none', padding: 0, boxShadow: 'none', background: 'transparent' }}
+                        />
+                        <button type="button" onClick={() => setShowPassword((p) => !p)} aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          className="text-slate-500 hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-full p-0.5">
+                          {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
+                      {/* Strength meter */}
+                      {password && (() => {
+                        const s = getStrength(password);
+                        return (
+                          <div className="mt-2 space-y-1">
+                            <div className="flex gap-1">
+                              {[1,2,3,4].map((i) => (
+                                <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${i <= s ? STRENGTH_COLOR[s] : 'bg-white/10'}`} />
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <ShieldCheck size={10} className={STRENGTH_TEXT[s]} />
+                              <span className={`text-[11px] font-medium ${STRENGTH_TEXT[s]}`}>{STRENGTH_LABEL[s]} password</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className={`flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50 mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40
+                        ${isBusiness ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-neon-violet' : 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-neon-emerald'}`}
+                    >
+                      {loading
+                        ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                        : <>Create Account <ArrowRight size={15} /></>
+                      }
+                    </button>
+                  </form>
+
+                  {/* Footer */}
+                  <div className="mt-5 border-t border-white/8 pt-5 text-center text-sm">
+                    <p className="text-slate-500">
+                      Already have an account?{' '}
+                      <Link href="/login" className="font-semibold text-emerald-400 hover:text-emerald-300 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded">Sign in →</Link>
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
-
-        {/* Trust indicators */}
-        <p className="mt-4 text-center text-xs text-slate-500">
-          Secured with Supabase Auth · Business accounts verified within 24h
-        </p>
-      </div>
+      </motion.div>
     </main>
   );
 }

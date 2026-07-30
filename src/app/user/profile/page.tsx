@@ -10,11 +10,12 @@ import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import {
   Bookmark, Star, User as UserIcon, Mail, LogOut,
-  MapPin, Trash2, ChevronRight, Bell, Share2, Copy, Sparkles,
+  MapPin, Trash2, ChevronRight, Bell, Share2, Copy, Sparkles, Store,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getOrCreateReferralCode } from '@/app/lib/growth';
 import { subscribeToPush, unsubscribeFromPush, isPushSupported } from '@/app/lib/push';
+import { isBusinessRole } from '@/app/lib/auth-role';
 
 type SavedDeal = {
   id: number;
@@ -132,9 +133,8 @@ export default function UserProfilePage() {
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getUser();
-      if (!data.user) { router.replace('/user/login'); return; }
-      const role = data.user.user_metadata?.role;
-      if (role === 'business' || localStorage.getItem('ld_role_hint') === 'business') {
+      if (!data.user) { router.replace('/login'); return; }
+      if (isBusinessRole(data.user)) {
         router.replace('/business/dashboard');
         return;
       }
@@ -193,7 +193,7 @@ export default function UserProfilePage() {
 
   const copyReferralLink = async () => {
     if (!user || !referralCode) return;
-    const link = `${window.location.origin}/user/signup?ref=${encodeURIComponent(referralCode)}`;
+    const link = `${window.location.origin}/signup?ref=${encodeURIComponent(referralCode)}`;
     await navigator.clipboard.writeText(link);
   };
 
@@ -205,6 +205,17 @@ export default function UserProfilePage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.replace('/');
+  };
+
+  const [becomingBusiness, setBecomingBusiness] = useState(false);
+  const becomeBusiness = async () => {
+    if (!user || becomingBusiness) return;
+    setBecomingBusiness(true);
+    const { error } = await supabase.auth.updateUser({
+      data: { ...user.user_metadata, role: 'business' },
+    });
+    if (!error) router.push('/business/dashboard');
+    else setBecomingBusiness(false);
   };
 
   const displayName = user?.user_metadata?.full_name
@@ -525,6 +536,25 @@ export default function UserProfilePage() {
                     Save notification preferences
                   </button>
                   {pushStatus && <p className="text-xs text-slate-500">{pushStatus}</p>}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-violet-500/25 bg-slate-900/80 overflow-hidden">
+                <div className="px-5 py-4 flex items-center gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-neon-violet">
+                    <Store size={18} className="text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white">List your business</p>
+                    <p className="text-xs text-slate-500">Start posting deals and reach local customers, free.</p>
+                  </div>
+                  <button
+                    onClick={becomeBusiness}
+                    disabled={becomingBusiness}
+                    className="shrink-0 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2 text-xs font-bold text-white shadow-neon-violet transition hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
+                  >
+                    {becomingBusiness ? '...' : 'Get started'}
+                  </button>
                 </div>
               </div>
 

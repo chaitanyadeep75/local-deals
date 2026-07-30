@@ -557,7 +557,7 @@ export default function BusinessDashboard() {
       const { data } = await supabase.auth.getSession();
       if (!data.session) { router.replace('/login'); return; }
       const role = data.session.user.user_metadata?.role;
-      if (role === 'user') { router.replace('/user/profile'); return; }
+      if (role !== 'business') { router.replace('/user/profile'); return; }
 
       const profile = (data.session.user.user_metadata?.business_profile || {}) as Record<string, string>;
       setShopName(profile.shop_name || '');
