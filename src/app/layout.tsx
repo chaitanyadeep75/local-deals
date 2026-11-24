@@ -49,23 +49,23 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="LocalDeals" />
-        <meta name="theme-color" content="#020617" />
+        <meta name="theme-color" content="#0a100e" />
         <link rel="apple-touch-icon" href="/icons/icon.svg" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased pb-24 bg-slate-950`}>
-        {/* Aurora background — fixed, behind everything */}
+        {/* Subtle ambient color keeps content in focus. */}
         <div className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 0 }}>
           <div
-            className="absolute -top-48 -left-48 h-[500px] w-[500px] rounded-full bg-violet-600/[0.12] blur-[120px] animate-aurora-1"
+            className="absolute -top-48 -left-48 h-[500px] w-[500px] rounded-full bg-emerald-700/[0.08] blur-[140px]"
           />
           <div
-            className="absolute -top-24 right-[-100px] h-[400px] w-[400px] rounded-full bg-fuchsia-600/[0.09] blur-[100px] animate-aurora-2"
+            className="absolute -top-24 right-[-100px] h-[400px] w-[400px] rounded-full bg-teal-700/[0.06] blur-[130px]"
           />
           <div
-            className="absolute bottom-0 -left-32 h-[350px] w-[350px] rounded-full bg-indigo-600/[0.08] blur-[100px]"
+            className="absolute bottom-0 -left-32 h-[350px] w-[350px] rounded-full bg-emerald-900/[0.08] blur-[120px]"
           />
           <div
-            className="absolute bottom-40 right-8 h-[280px] w-[280px] rounded-full bg-cyan-500/[0.06] blur-[80px]"
+            className="absolute bottom-40 right-8 h-[280px] w-[280px] rounded-full bg-amber-700/[0.035] blur-[100px]"
           />
         </div>
 

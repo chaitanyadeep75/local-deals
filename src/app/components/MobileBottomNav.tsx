@@ -85,15 +85,15 @@ export default function MobileBottomNav() {
           <div
             className={`flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-200 ${
               isActive('/map')
-                ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-neon-violet scale-110'
+                ? 'bg-gradient-to-br from-emerald-400 to-teal-600 shadow-lg shadow-emerald-950/40 scale-110'
                 : 'border border-white/10 bg-slate-800/80'
             }`}
           >
-            <MapPinned size={22} className={isActive('/map') ? 'text-white' : 'text-violet-400'} />
+            <MapPinned size={22} className={isActive('/map') ? 'text-slate-950' : 'text-emerald-300'} />
           </div>
           <span
             className={`text-[10px] font-bold transition-colors duration-200 ${
-              isActive('/map') ? 'text-violet-400' : 'text-slate-500'
+              isActive('/map') ? 'text-emerald-300' : 'text-slate-500'
             }`}
           >
             Map
@@ -110,13 +110,8 @@ export default function MobileBottomNav() {
 
         {/* ── Me / Account ── */}
         <button
-          onClick={async () => {
-            if (!user) { router.push('/signup'); return; }
-            await supabase.auth.signOut();
-            void trackEvent('mobile_logout', { source: 'mobile_bottom_nav' });
-            router.push('/');
-          }}
-          aria-label={user ? 'Sign out' : 'Sign up'}
+          onClick={() => router.push(user ? '/user/profile' : '/login')}
+          aria-label={user ? 'Open account' : 'Sign in'}
           className="flex flex-1 flex-col items-center gap-1 py-1 select-none active:opacity-60 transition-opacity duration-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 rounded-xl"
         >
           {user ? (
@@ -130,14 +125,14 @@ export default function MobileBottomNav() {
               >
                 {initial}
               </div>
-              <span className="text-[10px] font-bold text-slate-500">Logout</span>
+              <span className="text-[10px] font-bold text-slate-500">Account</span>
             </>
           ) : (
             <>
               <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-slate-800/80">
                 <UserCircle2 size={20} className="text-slate-500" />
               </div>
-              <span className="text-[10px] font-bold text-slate-500">Sign Up</span>
+              <span className="text-[10px] font-bold text-slate-500">Sign in</span>
             </>
           )}
         </button>

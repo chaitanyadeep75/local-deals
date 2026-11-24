@@ -996,11 +996,17 @@ export default function BusinessDashboard() {
     <main className="relative min-h-screen overflow-hidden bg-slate-950 px-1 pb-16 md:px-4">
       <div className="pointer-events-none absolute -top-24 -left-20 h-72 w-72 rounded-full bg-fuchsia-500/8 blur-3xl" />
       <div className="pointer-events-none absolute top-10 right-0 h-80 w-80 rounded-full bg-indigo-500/8 blur-3xl" />
-      <div className="relative mb-6 mt-3 overflow-hidden rounded-3xl border border-white/10 shadow-neon-violet md:mb-8 md:mt-5">
-        <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-indigo-600 to-fuchsia-600" />
-        <div className="relative p-5 text-white md:p-10">
-          <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Business Dashboard</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/90 md:mt-3 md:text-base">Manage your storefront profile, publish offers, and keep every deal map-ready.</p>
+      <div className="relative mb-6 mt-3 overflow-hidden rounded-3xl border border-emerald-200/10 shadow-card md:mb-8 md:mt-5">
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900" />
+        <div className="relative flex flex-col gap-5 p-5 text-white md:flex-row md:items-end md:justify-between md:p-9">
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[.18em] text-emerald-200">Your local storefront</p>
+            <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Business Dashboard</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-emerald-50/80 md:mt-3 md:text-base">Publish nearby offers, keep your storefront current, and see how customers find you.</p>
+          </div>
+          <a href="#add-deal" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-300 px-4 py-2.5 text-sm font-bold text-emerald-950 shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-200">
+            <Plus size={16} /> Create a deal
+          </a>
         </div>
       </div>
 
@@ -1184,7 +1190,7 @@ export default function BusinessDashboard() {
       )}
 
       {/* ADD DEAL FORM */}
-      <form onSubmit={handleAddDeal} className="mb-8 rounded-2xl border border-white/10 bg-slate-900/80 p-4 shadow-card backdrop-blur md:mb-10 md:p-8 [&_input]:bg-slate-800/80 [&_input]:text-white [&_textarea]:bg-slate-800/80 [&_textarea]:text-white [&_select]:bg-slate-800/80 [&_select]:text-white">
+      <form id="add-deal" onSubmit={handleAddDeal} className="mb-8 rounded-2xl border border-white/10 bg-slate-900/80 p-4 shadow-card backdrop-blur md:mb-10 md:p-8 [&_input]:bg-slate-800/80 [&_input]:text-white [&_textarea]:bg-slate-800/80 [&_textarea]:text-white [&_select]:bg-slate-800/80 [&_select]:text-white">
         <h2 className="text-xl font-semibold text-white mb-4 flex gap-2 items-center">
           <Plus size={18} /> Add New Deal
         </h2>

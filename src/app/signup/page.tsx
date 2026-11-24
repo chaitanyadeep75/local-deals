@@ -45,8 +45,10 @@ export default function SignupPage() {
   const [refCode, setRefCode] = useState<string | null>(null);
 
   useEffect(() => {
-    const code = new URLSearchParams(window.location.search).get('ref');
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('ref');
     if (code) setRefCode(code);
+    if (params.get('role') === 'business') setAccountType('business');
   }, []);
 
   const isBusiness = accountType === 'business';
@@ -96,10 +98,10 @@ export default function SignupPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="relative w-full"
+        className="relative mx-auto w-full max-w-[480px]"
       >
         <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
-          <div className="p-7">
+          <div className="p-5 sm:p-7">
             <AnimatePresence mode="wait">
               {success ? (
                 <motion.div

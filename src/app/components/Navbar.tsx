@@ -124,7 +124,7 @@ export default function Navbar() {
           href="/"
           className="group flex items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40"
         >
-          <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-neon-violet transition-all duration-300 group-hover:shadow-[0_0_28px_rgba(139,92,246,0.7)]">
+          <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 shadow-lg shadow-emerald-950/40 transition-all duration-300 group-hover:brightness-110">
             <Zap size={15} className="text-white" fill="white" />
           </div>
           <span className="text-gradient-brand text-xl font-extrabold tracking-tight md:text-2xl">
@@ -159,10 +159,11 @@ export default function Navbar() {
 
           {/* Auth section */}
           {!user ? (
-            <div className="flex items-center gap-2 ml-1">
+            <div className="ml-1 flex items-center gap-2">
+              <Link href="/signup?role=business" className="hidden rounded-xl border border-emerald-400/20 bg-emerald-400/[0.07] px-3 py-2 text-sm font-semibold text-emerald-200 transition hover:border-emerald-300/40 hover:bg-emerald-400/[0.12] md:inline-flex">For business</Link>
               <Link
                 href="/login"
-                className="rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-3 py-1.5 text-xs font-semibold text-white shadow-neon-violet transition-all duration-200 hover:opacity-90 hover:shadow-[0_0_28px_rgba(139,92,246,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/40 md:px-4 md:py-2 md:text-sm"
+                className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-lg shadow-emerald-950/30 transition-all duration-200 hover:brightness-110 md:px-4 md:py-2 md:text-sm"
               >
                 Sign In
               </Link>

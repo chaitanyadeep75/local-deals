@@ -52,7 +52,7 @@ function OtpInput({ value, onChange, disabled }: { value: string; onChange: (v: 
   };
 
   return (
-    <div className="flex gap-2 justify-center">
+    <div className="flex justify-center gap-1 sm:gap-2">
       {digits.map((d, i) => (
         <input
           key={i}
@@ -63,7 +63,7 @@ function OtpInput({ value, onChange, disabled }: { value: string; onChange: (v: 
           onKeyDown={(e) => onKeyDown(i, e)}
           onPaste={onPaste}
           onFocus={(e) => e.target.select()}
-          className={`h-12 w-10 rounded-xl border text-center text-lg font-bold text-white outline-none transition-all duration-200 disabled:opacity-50
+          className={`h-11 w-8 rounded-xl border text-center text-lg font-bold text-white outline-none transition-all duration-200 disabled:opacity-50 sm:h-12 sm:w-10
             ${d ? 'border-violet-500/60 bg-violet-500/15 shadow-neon-violet'
                : 'border-white/10 bg-slate-800/80 focus:border-violet-500/40 focus:ring-2 focus:ring-violet-500/20'}`}
           style={{ background: d ? undefined : 'rgba(30,41,59,0.8)' }}
@@ -178,10 +178,10 @@ function LoginContent() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="relative w-full"
+        className="relative mx-auto w-full max-w-[480px]"
       >
         <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/90 shadow-[0_24px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
-          <div className="p-7">
+          <div className="p-5 sm:p-7">
             {/* Account type toggle */}
             <div className="mb-5 flex gap-1 rounded-full border border-white/8 bg-white/5 p-1">
               {(['user', 'business'] as AccountType[]).map((t) => (
